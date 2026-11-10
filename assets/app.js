@@ -32,6 +32,8 @@
     carte: null,
     tab: "stats",
     dep: "",
+    sous: 0,
+    partie: (() => { try { return localStorage.getItem("bigwin_partie") || "vue"; } catch (e) { return "vue"; } })(),
     session: lireSession(),
   };
 
@@ -298,6 +300,24 @@
       barreM(segsAct(c), Math.max(a.length, 1), "m-bar m-bar-bw");
   }
 
+  function afficherPartie() {
+    const diapos = $$("#rapport .m-diapo").filter((el) => el.dataset.partie === S.partie);
+    if (S.sous >= diapos.length) S.sous = 0;
+    $$("#rapport .m-diapo").forEach((el) => (el.hidden = el.dataset.partie !== S.partie || +el.dataset.sous !== S.sous));
+    // second niveau : activités / outputs / zones d'un Big Win
+    const sn = $("#rap-sous");
+    sn.hidden = diapos.length < 2;
+    sn.innerHTML = diapos.length < 2 ? "" : diapos.map((el, i) =>
+      `<button type="button" role="tab" data-sous="${i}" aria-selected="${i === S.sous}"${i === S.sous ? ' class="actif"' : ""}>${esc(el.dataset.titre)}</button>`).join("");
+    $("#bloc-maj").hidden = S.partie !== "maj";
+    $$("#rap-nav button").forEach((b) => {
+      const ok = b.dataset.partie === S.partie;
+      b.classList.toggle("actif", ok);
+      b.setAttribute("aria-selected", ok);
+    });
+    try { localStorage.setItem("bigwin_partie", S.partie); } catch (e) { /* ignoré */ }
+  }
+
   function renderStats() {
     const d = S.data;
     const strats = stratsFiltrees();
@@ -458,9 +478,21 @@
       </div></section>`;
 
     $("#rapport").innerHTML = h;
-    $("#rap-nav").innerHTML = [["m-vue", "Vue d’ensemble"], ["m-chiffres", "Chiffres clés"]]
-      .concat(parBw.map((x) => [`m-bw-${x.b.id}`, codeBW(x.b)])).concat([["m-retenir", "À retenir"]])
-      .map(([id, l]) => `<a href="#${id}">${esc(l)}</a>`).join("");
+    // Chaque diapo appartient à une partie : seule la partie sélectionnée est affichée
+    let partie = "", rang = 0;
+    $$("#rapport .m-diapo").forEach((el) => {
+      if (el.id) { partie = el.id.replace(/^m-/, ""); rang = 0; }
+      el.dataset.partie = partie;
+      el.dataset.sous = rang++;
+      const lib = el.querySelector(".m-entete span");
+      el.dataset.titre = lib ? lib.textContent.split("·").pop().trim() : "";
+    });
+    const parties = [["vue", "Vue d’ensemble"], ["chiffres", "Chiffres clés"]]
+      .concat(parBw.map((x) => [`bw-${x.b.id}`, codeBW(x.b)])).concat([["retenir", "À retenir"], ["maj", "Mises à jour"]]);
+    if (!parties.some(([k]) => k === S.partie)) S.partie = "vue";
+    $("#rap-nav").innerHTML = parties.map(([k, l]) =>
+      `<button type="button" role="tab" data-partie="${k}" aria-selected="${k === S.partie}"${k === S.partie ? ' class="actif"' : ""}>${esc(l)}</button>`).join("");
+    afficherPartie();
 
     // Historique
     const hist = d.historique.slice(0, 40);
@@ -788,6 +820,22 @@
       if (b.dataset.goto === "nouvelle") { allerA("activites"); ouvrirNouvelle(); } else allerA(b.dataset.goto);
     }));
     $("#btn-refresh").addEventListener("click", () => rafraichir("Données actualisées"));
+    $("#rap-sous").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-sous]");
+      if (!b) return;
+      S.sous = +b.dataset.sous;
+      afficherPartie();
+      window.scrollTo({ top: 0 });
+    });
+    $("#rap-nav").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-partie]");
+      if (!b) return;
+      S.partie = b.dataset.partie;
+      S.sous = 0;
+      afficherPartie();
+      $("#tab-stats").scrollIntoView({ block: "start" });
+      window.scrollTo({ top: 0 });
+    });
     $("#filtre-dep").addEventListener("change", (e) => { S.dep = e.target.value; renderTout(); });
     ["#recherche-act", "#filtre-statut-act"].forEach((s) => $(s).addEventListener("input", renderActivites));
     ["#recherche-out", "#filtre-statut-out", "#filtre-zone-out"].forEach((s) => $(s).addEventListener("input", renderOutputs));

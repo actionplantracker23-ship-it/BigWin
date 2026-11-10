@@ -59,9 +59,10 @@
 
     <!-- STATISTIQUES -->
     <section id="tab-stats" class="tab-panel">
-      <nav class="rap-nav" id="rap-nav" aria-label="Sections du rapport"></nav>
+      <nav class="rap-nav" id="rap-nav" role="tablist" aria-label="Parties du rapport"></nav>
+      <nav class="rap-sous" id="rap-sous" role="tablist" aria-label="Volets du Big Win" hidden></nav>
       <div class="rapport" id="rapport"></div>
-      <article class="card">
+      <article class="card" id="bloc-maj" hidden>
         <h3 class="card-title">Dernières mises à jour</h3>
         <ul class="historique" id="historique"></ul>
       </article>

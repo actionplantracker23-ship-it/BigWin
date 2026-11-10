@@ -442,3 +442,14 @@ table.m-table { width: 100%; border-collapse: collapse; min-width: 720px; }
 .m-dep-zone { flex: 1; min-width: 0; }
 .m-dep-l > b { flex: none; min-width: 26px; text-align: right; color: #004D84; }
 .m-taux { display: inline-block; min-width: 54px; text-align: center; color: #fff; font-weight: 700; font-size: 14px; padding: 3px 8px; border-radius: 3px; }
+
+/* Sélecteur de partie du rapport (une partie affichée à la fois) */
+.rap-nav button { font-family: Georgia, serif; font-size: 14px; color: #004D84; border: 1px solid #c9d6e2; background: #fff;
+  border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.rap-nav button:hover { border-color: #F7941D; }
+.rap-nav button.actif { background: #004D84; border-color: #004D84; color: #fff; }
+@media (max-width: 560px) { .rap-nav button { flex: none; } }
+.rap-sous { display: flex; gap: 0; margin: -4px 0 14px; border-bottom: 2px solid #D9E2EA; overflow-x: auto; }
+.rap-sous button { font-family: Georgia, serif; font-size: 15px; color: #6D6E71; background: none; border: 0;
+  border-bottom: 3px solid transparent; margin-bottom: -2px; padding: 8px 16px; cursor: pointer; white-space: nowrap; }
+.rap-sous button.actif { color: #004D84; border-bottom-color: #F7941D; font-weight: 700; }

@@ -33,6 +33,8 @@
     tab: "stats",
     dep: "",
     sous: 0,
+    lang: (() => { try { return localStorage.getItem("bigwin_lang") || "fr"; } catch (e) { return "fr"; } })(),
+    trad: new Map(),
     partie: (() => { try { return localStorage.getItem("bigwin_partie") || "vue"; } catch (e) { return "vue"; } })(),
     session: lireSession(),
   };
@@ -42,7 +44,7 @@
   const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
   const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const pct = (a, b) => (b ? Math.round((100 * a) / b) : 0);
-  const fmtDate = (d) => new Date(d).toLocaleString("fr-FR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  const fmtDate = (d) => new Date(d).toLocaleString(S.lang === "en" ? "en-GB" : "fr-FR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
   const nettoie = (t) => String(t || "").replace(/^\s*\*\s*/gm, "").replace(/\s+/g, " ").trim();
   const court = (t, n) => { t = nettoie(t); return t.length > n ? t.slice(0, n - 1).replace(/\s+\S*$/, "") + "…" : t; };
 
@@ -63,8 +65,22 @@
   }
 
   /* ---------- noms des Big Wins ---------- */
-  const titreBW = (b) => b.titre || b.code;
-  const nomBW = (b) => (b.titre ? b.titre + " : " + b.libelle : b.libelle || b.code);
+  // Texte d'une donnée dans la langue choisie (la traduction n'est utilisée que si l'original n'a pas changé depuis)
+  function tr(objet, id, champ, orig) {
+    if (orig == null || orig === "") return orig;
+    const x = S.trad.get(objet + "|" + id + "|" + champ + "|" + S.lang);
+    return x && x.s === orig ? x.t : orig;
+  }
+  const L = (a) => tr("activite", a.id, "libelle", a.libelle);
+  const C = (a) => tr("activite", a.id, "commentaire", a.commentaire);
+  const SL = (s) => tr("strategie", s.id, "libelle", s.libelle);
+  const ST = (s) => tr("strategie", s.id, "titre_court", s.titre_court);
+  const SR = (s) => tr("strategie", s.id, "realisations", s.realisations);
+  const BL = (b) => tr("big_win", b.id, "libelle", b.libelle);
+  const CL = (o) => tr("output", o.id, "chiffre_libelle", o.chiffre_libelle);
+  const OC = (o) => tr("output", o.id, "commentaire", o.commentaire);
+  const titreBW = (b) => tr("big_win", b.id, "titre", b.titre) || b.code;
+  const nomBW = (b) => (b.titre ? titreBW(b) + " : " + BL(b) : BL(b) || b.code);
 
   /* ---------- API ---------- */
   async function api(chemin, opts = {}) {
@@ -98,6 +114,7 @@
       if (!d.zonesParOutput.has(oz.output_id)) d.zonesParOutput.set(oz.output_id, []);
       d.zonesParOutput.get(oz.output_id).push(oz.zone_id);
     });
+    S.trad = new Map((r.traductions || []).map((x) => [x.o + "|" + x.i + "|" + x.c + "|" + x.l, { t: x.t, s: x.s }]));
     S.data = d;
     S.chargeA = new Date();
     S.empreinte = await lireEmpreinte();
@@ -216,7 +233,7 @@
   const OUT_M = { atteint: M.vert, partiel: M.ambreClair, en_cours: M.ambre, non_atteint: M.rouge, non_renseigne: M.grisStatut };
   const ZONE_M = { atteint: { fill: M.vert, txt: "#1E7A3B" }, en_cours: { fill: M.ambre, txt: "#9A6A00" },
     non_atteint: { fill: M.rouge, txt: "#A82E2E" }, non_renseigne: { fill: M.grisStatut, txt: M.gris } };
-  const titreCourt = (b) => b.titre_court || court(b.libelle, 70);
+  const titreCourt = (b) => tr("big_win", b.id, "titre_court", b.titre_court) || court(BL(b), 70);
   const codeBW = (b) => b.code.replace(" (politiques)", " pol.");
   const pluriel = (n, s, p) => n + " " + (n > 1 ? p : s);
 
@@ -248,13 +265,14 @@
 
   const MOTS_VIDES = new Set(("a an and are as at be by for from has have in into is it its of on or over that the their this to with within " +
     "including include ensure ensuring based between through across all new one two three per via using use used each more other than " +
-    "le la les de des du un une et en au aux pour par sur dans avec sans ce ces qui que leur leurs est sont plus ainsi à d l q1 q2 q3 q4 26 2026 01 02").split(" "));
+    "le la les de des du un une et en au aux pour par sur dans avec sans ce ces qui que leur leurs est sont plus ainsi à d l q1 q2 q3 q4 26 2026 01 02 " +
+    "y compris afin tout tous toutes ici fin entre son ses sa cette leurs nos notre ont été être faire mettre place niveau t1 t2 t3 t4").split(" "));
 
   // Nuage de mots : ensemble des activités à mettre en œuvre
   function nuageMots(acts) {
     const freq = new Map();
     acts.forEach((a) => {
-      String(a.libelle || "").toLowerCase().replace(/[’']/g, " ").split(/[^a-zà-ÿ0-9]+/i).forEach((m) => {
+      String(L(a) || "").toLowerCase().replace(/[’']/g, " ").split(/[^a-zà-ÿ0-9]+/i).forEach((m) => {
         if (m.length < 3 || MOTS_VIDES.has(m) || /^\d+$/.test(m)) return;
         freq.set(m, (freq.get(m) || 0) + 1);
       });
@@ -285,8 +303,8 @@
   }
 
   // Formulations simples des outputs (repli sur les libellés d'origine)
-  const objectifOut = (o) => o.objectif_clair || o.libelle_court || o.cible;
-  const resultatOut = (o) => o.resultat_clair || o.valeur_realisee || "";
+  const objectifOut = (o) => tr("output", o.id, "objectif_clair", o.objectif_clair) || o.libelle_court || o.cible;
+  const resultatOut = (o) => tr("output", o.id, "resultat_clair", o.resultat_clair) || o.valeur_realisee || "";
   const STATUT_SIMPLE = { atteint: "Objectif atteint", partiel: "Partiellement atteint", en_cours: "En cours",
     non_atteint: "Pas encore atteint", non_renseigne: "Résultat à renseigner" };
 
@@ -340,7 +358,7 @@
     return `<div class="m-carte-out m-co-${t.statut}">
       <div class="m-carte-tete">${cle ? `<span class="m-gros">${esc(cle)}</span>` : "<span></span>"}
         <span class="m-statut" style="background:${OUT_M[t.statut]}">${STATUT_SIMPLE[t.statut]}</span></div>
-      ${cle && t.chiffre_libelle ? `<div class="m-chiffre-lib">${esc(t.chiffre_libelle)}</div>` : ""}
+      ${cle && t.chiffre_libelle ? `<div class="m-chiffre-lib">${esc(CL(t))}</div>` : ""}
       <p class="m-obj"><span>Objectif</span>${esc(objectifOut(t))}</p>
       <p class="m-res"><span>Résultat</span>${res ? esc(court(res, 260)) : '<em class="m-vide">Pas encore renseigné</em>'}</p>
     </div>`;
@@ -447,17 +465,17 @@
           // une puce par activité finalisée (le nombre affiché = nombre de puces) ; « ce qui a été fait » en dessous
           const vus = new Set();
           const puces = as.filter((t) => t.statut === "completee").map((t) => {
-            const c = String(t.commentaire || "").trim();
+            const c = String(C(t) || "").trim();
             const cle = c.toLowerCase();
             const fait = c && !vus.has(cle) ? (vus.add(cle), c) : "";
-            return `<li><span class="m-act">${esc(court(t.libelle, 140))}</span>${fait ? `<small class="m-fait">${esc(court(fait.replace(/\s*\n+\s*/g, " · "), 220))}</small>` : ""}</li>`;
+            return `<li><span class="m-act">${esc(court(L(t), 140))}</span>${fait ? `<small class="m-fait">${esc(court(fait.replace(/\s*\n+\s*/g, " · "), 220))}</small>` : ""}</li>`;
           });
-          return `<div class="m-strat"><div class="m-strat-tete"><b>${nf}</b><span>${esc(s.titre_court || court(s.libelle, 80))}</span></div>
+          return `<div class="m-strat"><div class="m-strat-tete"><b>${nf}</b><span>${esc(ST(s) || court(SL(s), 80))}</span></div>
             <ul>${puces.join("")}</ul></div>`;
         }).join("")}</div>` : '<p class="m-vide">Aucune activité finalisée à ce jour.</p>'}
         ${[["en_cours", "En cours"], ["non_demarree", "Non démarrées"], ["reportee", "Reportées / annulées"]].map(([k, titre]) => {
           const l = a.filter((t) => (k === "reportee" ? ["reportee", "annulee"].includes(t.statut) : t.statut === k));
-          return l.length ? `<div class="m-reste"><h5>${titre} · ${l.length}</h5><ul>${l.map((t) => `<li>${esc(court(t.libelle, 150))}</li>`).join("")}</ul></div>` : "";
+          return l.length ? `<div class="m-reste"><h5>${titre} · ${l.length}</h5><ul>${l.map((t) => `<li>${esc(court(L(t), 150))}</li>`).join("")}</ul></div>` : "";
         }).join("")}</section>`;
 
       // outputs atteints
@@ -499,12 +517,12 @@
       <h2 class="m-titre">À retenir</h2><div class="m-retenir">
       <div class="m-ret"><div class="m-ret-tete"><b style="color:${M.vert}">${ca.completee}</b><span>Acquis<small>activités finalisées sur ${acts.length}</small></span></div>
         <ul><li>${pct(ca.completee, acts.length)} % des activités finalisées (${ca.completee} sur ${acts.length})</li><li>${co.atteint} outputs atteints sur ${outs.length}</li>
-        ${chiffres.map((t) => `<li><b>${esc(chiffreCle(t))}</b> ${t.chiffre_libelle ? esc(t.chiffre_libelle) : ": " + esc(objectifOut(t))}</li>`).join("")}</ul></div>
+        ${chiffres.map((t) => `<li><b>${esc(chiffreCle(t))}</b> ${t.chiffre_libelle ? esc(CL(t)) : ": " + esc(objectifOut(t))}</li>`).join("")}</ul></div>
       <div class="m-ret"><div class="m-ret-tete"><b style="color:${M.ambre}">${enCours.length}</b><span>En cours<small>activités</small></span></div>
-        <ul>${enCours.map((t) => `<li><b>${esc(bwDe(t))}</b> : ${esc(court(t.libelle, 90))}</li>`).join("") || "<li>Aucune</li>"}</ul></div>
+        <ul>${enCours.map((t) => `<li><b>${esc(bwDe(t))}</b> : ${esc(court(L(t), 90))}</li>`).join("") || "<li>Aucune</li>"}</ul></div>
       <div class="m-ret"><div class="m-ret-tete"><b style="color:${M.rouge}">${nonDem.length}</b><span>Non démarrées<small>activités</small></span></div>
-        <ul>${nonDem.map((t) => `<li><b>${esc(bwDe(t))}</b> : ${esc(court(t.libelle, 90))}</li>`).join("") || "<li>Aucune</li>"}</ul>
-        ${reportees.length ? `<h5 class="m-ret-sous">Reportées / annulées · ${reportees.length}</h5><ul>${reportees.map((t) => `<li><b>${esc(bwDe(t))}</b> : ${esc(court(t.libelle, 90))}</li>`).join("")}</ul>` : ""}</div>
+        <ul>${nonDem.map((t) => `<li><b>${esc(bwDe(t))}</b> : ${esc(court(L(t), 90))}</li>`).join("") || "<li>Aucune</li>"}</ul>
+        ${reportees.length ? `<h5 class="m-ret-sous">Reportées / annulées · ${reportees.length}</h5><ul>${reportees.map((t) => `<li><b>${esc(bwDe(t))}</b> : ${esc(court(L(t), 90))}</li>`).join("")}</ul>` : ""}</div>
       </div></section>`;
 
     $("#rapport").innerHTML = h;
@@ -530,7 +548,7 @@
       let quoi = "";
       if (e.objet === "activite") {
         const t = d.activites.find((y) => y.id === e.objet_id);
-        quoi = "Activité « " + esc(court(t ? t.libelle : "#" + e.objet_id, 70)) + " »";
+        quoi = "Activité « " + esc(court(t ? L(t) : "#" + e.objet_id, 70)) + " »";
       } else if (e.objet === "output") {
         const t = d.outputs.find((y) => y.id === e.objet_id);
         quoi = "Output « " + esc(court(t ? objectifOut(t) : "#" + e.objet_id, 70)) + " »";
@@ -560,12 +578,12 @@
       let corps = "";
       sb.forEach((s) => {
         const acts = d.activites.filter((a) => a.strategy_id === s.id &&
-          (!fs || a.statut === fs) && (!q || (a.libelle + " " + (a.commentaire || "")).toLowerCase().includes(q)));
+          (!fs || a.statut === fs) && (!q || [a.libelle, L(a), a.commentaire, C(a)].join(" ").toLowerCase().includes(q)));
         if (!acts.length && (q || fs)) return;
         const edit = peutModifierStrat(s);
         const deps = (s.departements || []).join(", ") || '<span class="vide">Non précisé</span>';
-        const stratCell = `<td class="strat" rowspan="${Math.max(acts.length, 1)}">${esc(court(s.libelle, 140))}
-          ${s.realisations ? `<details><summary>Ce qui est réellement fait</summary><p>${esc(s.realisations)}</p></details>` : ""}</td>`;
+        const stratCell = `<td class="strat" rowspan="${Math.max(acts.length, 1)}">${esc(court(SL(s), 140))}
+          ${s.realisations ? `<details><summary>Ce qui est réellement fait</summary><p>${esc(SR(s))}</p></details>` : ""}</td>`;
         if (!acts.length) {
           corps += `<tr>${stratCell}<td colspan="5" class="vide">Aucune activité renseignée</td></tr>`;
           return;
@@ -575,15 +593,15 @@
             ? `<select class="badge st-${a.statut}" data-act-statut="${a.id}" aria-label="Statut">${Object.entries(STATUTS_ACT).map(([k, v]) => `<option value="${k}"${k === a.statut ? " selected" : ""}>${v}</option>`).join("")}</select>`
             : `<span class="badge st-${a.statut}">${STATUTS_ACT[a.statut]}</span>`;
           const comm = edit
-            ? `<textarea class="comm-edit" rows="${Math.min(8, Math.max(2, Math.ceil((a.commentaire || "").length / 45) + (a.commentaire || "").split("\n").length - 1))}" data-act-comm="${a.id}" placeholder="Ajouter un commentaire…">${esc(a.commentaire || "")}</textarea>`
-            : esc(a.commentaire || "");
+            ? `<textarea class="comm-edit" rows="${Math.min(8, Math.max(2, Math.ceil((C(a) || "").length / 45) + (C(a) || "").split("\n").length - 1))}" data-act-comm="${a.id}" data-initial="${esc(C(a) || "")}" placeholder="Ajouter un commentaire…">${esc(C(a) || "")}</textarea>`
+            : esc(C(a) || "");
           const maj = a.updated_by && a.updated_by !== "Import Excel" ? `<span class="maj">MàJ ${fmtDate(a.updated_at)} · ${esc(a.updated_by)}</span>` : "";
-          corps += `<tr>${i === 0 ? stratCell : ""}<td>${esc(a.libelle)}</td>${i === 0 ? `<td class="dep" rowspan="${acts.length}">${deps}</td>` : ""}
+          corps += `<tr>${i === 0 ? stratCell : ""}<td>${esc(L(a))}</td>${i === 0 ? `<td class="dep" rowspan="${acts.length}">${deps}</td>` : ""}
             <td class="ech">${esc(a.echeance || "")}</td><td class="st">${statut}${maj}</td><td class="comm">${comm}</td></tr>`;
         });
       });
       if (!corps) return;
-      html += `<tr class="grp"><td colspan="6"><b>${esc(titreBW(b))} :</b> <span class="grp-nom">${esc(b.libelle)}</span><br><small>${nb} activité(s) · ${pct(fini, nb)} % achevées</small></td></tr>` + corps;
+      html += `<tr class="grp"><td colspan="6"><b>${esc(titreBW(b))} :</b> <span class="grp-nom">${esc(BL(b))}</span><br><small>${nb} activité(s) · ${pct(fini, nb)} % achevées</small></td></tr>` + corps;
     });
     $("#table-activites tbody").innerHTML = html || '<tr><td colspan="6" class="vide">Aucune activité ne correspond aux filtres.</td></tr>';
   }
@@ -614,16 +632,16 @@
         (!q || [o.cible, o.objectif_clair, o.resultat_clair, o.valeur_realisee, o.commentaire].join(" ").toLowerCase().includes(q)));
       if (!vis.length) return;
       const at = ob.filter((o) => o.statut === "atteint").length;
-      html += `<tr class="grp"><td colspan="5"><b>${esc(titreBW(b))} :</b> <span class="grp-nom">${esc(b.libelle)}</span><br><small>${ob.length} output(s) · ${pct(at, ob.length)} % atteints</small></td></tr>`;
+      html += `<tr class="grp"><td colspan="5"><b>${esc(titreBW(b))} :</b> <span class="grp-nom">${esc(BL(b))}</span><br><small>${ob.length} output(s) · ${pct(at, ob.length)} % atteints</small></td></tr>`;
       vis.forEach((o) => {
         const edit = peutModifierOutput(o);
         const maj = o.updated_by && o.updated_by !== "Import Excel" ? `<span class="maj">MàJ ${fmtDate(o.updated_at)} · ${esc(o.updated_by)}</span>` : "";
         const res = resultatOut(o), cle = chiffreCle(o);
-        html += `<tr><td>${esc(objectifOut(o))}${o.objectif_clair ? `<span class="maj" title="Formulation d'origine">${esc(o.cible)}</span>` : ""}</td>
-          <td>${cle && cle !== "Fait" ? `<b class="out-cle">${esc(cle)}</b> ${t2(o.chiffre_libelle)}<br>` : ""}${res ? esc(res) : '<span class="vide">À compléter</span>'}</td>
+        html += `<tr><td title="${esc(o.cible)}">${esc(objectifOut(o))}</td>
+          <td>${cle && cle !== "Fait" ? `<b class="out-cle">${esc(cle)}</b> ${t2(CL(o))}<br>` : ""}${res ? esc(res) : '<span class="vide">À compléter</span>'}</td>
           <td class="st"><span class="badge st-${o.statut}">${STATUT_SIMPLE[o.statut]}</span>${maj}
             ${edit ? `<br><button class="btn btn-outline btn-small" data-out-edit="${o.id}" style="margin-top:6px">Mettre à jour</button>` : ""}</td>
-          <td>${chipsZones(o)}</td><td class="comm">${esc(o.commentaire || "")}</td></tr>`;
+          <td>${chipsZones(o)}</td><td class="comm">${esc(OC(o) || "")}</td></tr>`;
       });
     });
     $("#table-outputs tbody").innerHTML = html || '<tr><td colspan="5" class="vide">Aucun output ne correspond aux filtres.</td></tr>';
@@ -715,7 +733,7 @@
       b.innerHTML = `Connecté pour <b>${nom}</b> : ${estAdmin() ? "vous pouvez mettre à jour toutes les activités et tous les outputs." : "vous pouvez mettre à jour les activités de votre structure."}`;
     }
     if (S.chargeA) {
-      b.innerHTML += ` <span class="bandeau-maj" title="Le tableau de bord se met à jour automatiquement dès qu'une activité ou un output est modifié.">· Données à jour à ${S.chargeA.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>`;
+      b.innerHTML += ` <span class="bandeau-maj" title="Le tableau de bord se met à jour automatiquement dès qu'une activité ou un output est modifié.">· Données à jour à ${S.chargeA.toLocaleTimeString(S.lang === "en" ? "en-GB" : "fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>`;
     }
     $("#btn-nouvelle").hidden = lectureSeule();
   }
@@ -797,7 +815,7 @@
     if (!bws.length) { toast("Aucune stratégie n'est rattachée à votre département", true); return; }
     $("#na-bw").innerHTML = bws.map((b) => `<option value="${b.id}" title="${esc(nomBW(b))}">${esc(court(nomBW(b), 80))}</option>`).join("");
     const majStrat = () => {
-      $("#na-strat").innerHTML = strats.filter((s) => s.big_win_id === +$("#na-bw").value).map((s) => `<option value="${s.id}">${esc(court(s.libelle, 90))}</option>`).join("");
+      $("#na-strat").innerHTML = strats.filter((s) => s.big_win_id === +$("#na-bw").value).map((s) => `<option value="${s.id}">${esc(court(ST(s) || SL(s), 90))}</option>`).join("");
     };
     $("#na-bw").onchange = majStrat;
     majStrat();
@@ -933,7 +951,8 @@
       const t = e.target.closest("[data-act-comm]");
       if (!t) return;
       const a = S.data.activites.find((x) => x.id === +t.dataset.actComm);
-      if ((a.commentaire || "") !== t.value) majActivite(a.id, { commentaire: t.value });
+      // n'enregistre que si le texte affiché (éventuellement traduit) a vraiment été modifié
+      if ((t.dataset.initial || "") !== t.value) majActivite(a.id, { commentaire: t.value });
     });
     $("#table-outputs").addEventListener("click", (e) => {
       const b = e.target.closest("[data-out-edit]");
@@ -1018,9 +1037,18 @@
     }
   }
 
+  function changerLangue(l) {
+    S.lang = l;
+    try { localStorage.setItem("bigwin_lang", l); } catch (e) { /* ignoré */ }
+    window.I18N.definir(l);
+    if (S.data) { remplirFiltres(); renderTout(); }
+  }
+
   async function demarrer() {
     $$("[data-annee]").forEach((e) => (e.textContent = CFG.annee));
     brancher();
+    $$("[data-lang-btn]").forEach((b) => b.addEventListener("click", () => changerLangue(S.lang === "en" ? "fr" : "en")));
+    window.I18N.definir(S.lang);
     let tab = "stats";
     try { tab = localStorage.getItem("bigwin_tab") || "stats"; } catch (e) { /* ignoré */ }
     allerA(["stats", "activites", "outputs", "carte"].includes(tab) ? tab : "stats");

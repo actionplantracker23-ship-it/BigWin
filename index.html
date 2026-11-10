@@ -25,6 +25,7 @@
       <input type="password" id="login-code" required autofocus>
       <p class="form-err" id="login-err" role="alert"></p>
       <button type="submit" class="btn btn-green">Se connecter</button>
+      <button class="lang-btn lang-btn-login" type="button" data-lang-btn data-notr>EN</button>
     </form>
   </section>
 
@@ -32,6 +33,7 @@
     <div class="topbar-in">
       <span class="logo" aria-hidden="true">BW</span>
       <h1 class="topbar-title">Tableau de bord <span class="muted-on-green">· Big Wins <span data-annee>2026</span></span></h1>
+      <button class="lang-btn" type="button" data-lang-btn data-notr>EN</button>
       <button class="icon-btn" id="btn-refresh" title="Actualiser" aria-label="Actualiser">
         <svg viewBox="0 0 24 24" width="22" height="22"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
@@ -232,6 +234,7 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="assets/config.js?v=__VERSION__"></script>
+  <script src="assets/i18n.js?v=__VERSION__"></script>
   <script src="assets/app.js?v=__VERSION__"></script>
 </body>
 </html>

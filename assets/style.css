@@ -494,3 +494,10 @@ table.m-table.m-dep { min-width: 0; table-layout: auto; }
 .m-co-non_atteint .m-gros, .m-co-non_renseigne .m-gros { color: #6D6E71; }
 .out-cle { font-size: 17px; color: #004D84; }
 .out-cle-lib { color: var(--muted); font-size: 13px; }
+
+/* Bouton de langue FR / EN */
+.lang-btn { background: transparent; color: #fff; border: 1.5px solid rgba(255,255,255,.7); border-radius: 999px;
+  font: 700 13px/1 var(--corps); letter-spacing: .06em; padding: 7px 12px; cursor: pointer; }
+.lang-btn:hover { background: rgba(255,255,255,.15); }
+.lang-btn-login { color: var(--primaire); border-color: #c9d6e2; justify-self: center; margin-top: 4px; }
+.lang-btn-login:hover { background: var(--primaire-pale); }

@@ -113,7 +113,7 @@
         <div class="table-wrap">
           <table class="suivi" id="table-outputs">
             <thead><tr>
-              <th>Output (cible)</th><th>Valeur réalisée</th><th>Statut</th><th>Zones</th><th>Commentaire</th>
+              <th>Objectif</th><th>Résultat</th><th>Statut</th><th>Zones</th><th>Commentaire</th>
             </tr></thead>
             <tbody></tbody>
           </table>
@@ -190,11 +190,14 @@
       <h3>Mettre à jour l'output</h3>
       <p class="dlg-sub" id="out-cible"></p>
       <label>Statut <select id="out-statut"></select></label>
-      <label>Valeur réalisée <textarea id="out-valeur" rows="2"></textarea></label>
+      <label>Valeur réalisée (donnée brute) <textarea id="out-valeur" rows="2"></textarea></label>
+      <label>Objectif, en langage simple <textarea id="out-obj" rows="2" placeholder="ex. Réparer les téléphones des agents en moins de 3 jours"></textarea></label>
+      <label>Résultat, en langage simple <textarea id="out-res" rows="2" placeholder="ex. Les téléphones sont réparés en 2 jours en moyenne"></textarea></label>
       <div class="row-2">
-        <label>Chiffre clé affiché <input id="out-cle" placeholder="ex. 83,44 % ou Fait"></label>
-        <label>Libellé court (français) <input id="out-court"></label>
+        <label>Chiffre clé affiché <input id="out-cle" placeholder="ex. 83 % ou Fait"></label>
+        <label>Ce que mesure ce chiffre <input id="out-lib" placeholder="ex. délai moyen de réparation"></label>
       </div>
+      <input type="hidden" id="out-court">
       <label>Commentaire <textarea id="out-comm" rows="2"></textarea></label>
       <fieldset><legend>Zones d'intervention</legend><div id="out-zones" class="zones-check"></div></fieldset>
       <p class="form-err" id="out-err"></p>

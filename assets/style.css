@@ -480,3 +480,17 @@ table.m-table.m-dep { min-width: 0; table-layout: auto; }
 
 .m-strat li .m-act { display: block; }
 .m-strat li .m-fait { display: block; color: #6D6E71; font-size: 13px; line-height: 1.35; margin-top: 3px; padding-left: 8px; border-left: 2px solid #E1E6EC; }
+
+/* Outputs en langage simple */
+.m-section-2 { margin-top: 26px; }
+.m-carte-out { display: flex; flex-direction: column; gap: 6px; }
+.m-carte-tete { min-height: 40px; }
+.m-statut { color: #fff; font-size: 12px; font-weight: 700; padding: 4px 9px; white-space: nowrap; border-radius: 3px; }
+.m-co-partiel .m-statut, .m-co-en_cours .m-statut { color: #3b2a00; }
+.m-chiffre-lib { color: #1F2A36; font-size: 14px; margin-top: -4px; }
+.m-obj, .m-res { margin: 0; font-size: 14.5px; line-height: 1.4; }
+.m-obj span, .m-res span { display: block; font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: #6D6E71; margin-bottom: 1px; }
+.m-res { color: #1F2A36; }
+.m-co-non_atteint .m-gros, .m-co-non_renseigne .m-gros { color: #6D6E71; }
+.out-cle { font-size: 17px; color: #004D84; }
+.out-cle-lib { color: var(--muted); font-size: 13px; }

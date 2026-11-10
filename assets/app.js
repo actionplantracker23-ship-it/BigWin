@@ -284,6 +284,12 @@
     return `<span class="m-taux" style="background:${c}">${t} %</span>`;
   }
 
+  // Formulations simples des outputs (repli sur les libellés d'origine)
+  const objectifOut = (o) => o.objectif_clair || o.libelle_court || o.cible;
+  const resultatOut = (o) => o.resultat_clair || o.valeur_realisee || "";
+  const STATUT_SIMPLE = { atteint: "Objectif atteint", partiel: "Partiellement atteint", en_cours: "En cours",
+    non_atteint: "Pas encore atteint", non_renseigne: "Résultat à renseigner" };
+
   // Chiffre clé d'un output : saisi à la main, sinon tiré de la valeur réalisée, sinon « Fait » s'il est atteint
   function extraireChiffre(texte) {
     const t = String(texte || "");
@@ -325,6 +331,19 @@
       b.setAttribute("aria-selected", ok);
     });
     try { localStorage.setItem("bigwin_partie", S.partie); } catch (e) { /* ignoré */ }
+  }
+
+  // Carte d'un output : chiffre clé expliqué, objectif et résultat en phrases simples
+  function carteOutput(t) {
+    const cle = chiffreCle(t);
+    const res = resultatOut(t);
+    return `<div class="m-carte-out m-co-${t.statut}">
+      <div class="m-carte-tete">${cle ? `<span class="m-gros">${esc(cle)}</span>` : "<span></span>"}
+        <span class="m-statut" style="background:${OUT_M[t.statut]}">${STATUT_SIMPLE[t.statut]}</span></div>
+      ${cle && t.chiffre_libelle ? `<div class="m-chiffre-lib">${esc(t.chiffre_libelle)}</div>` : ""}
+      <p class="m-obj"><span>Objectif</span>${esc(objectifOut(t))}</p>
+      <p class="m-res"><span>Résultat</span>${res ? esc(court(res, 260)) : '<em class="m-vide">Pas encore renseigné</em>'}</p>
+    </div>`;
   }
 
   function renderStats() {
@@ -446,10 +465,9 @@
       const autres = o.filter((t) => t.statut !== "atteint");
       h += `<section class="m-diapo">${enteteBW(b, a, dp, "Outputs atteints")}
         <h4 class="m-section">Outputs atteints <span class="m-section-n">${at.length}<small>/${o.length}</small></span></h4>
-        ${at.length ? `<div class="m-cartes">${at.map((t) => `<div class="m-carte-out"><div class="m-carte-tete"><span class="m-gros">${esc(chiffreCle(t))}</span><span class="m-badge m-badge-ok">Atteint</span></div>
-          <p>${esc(t.libelle_court || t.cible)}</p>${t.valeur_realisee ? `<small>${esc(court(t.valeur_realisee, 140))}</small>` : ""}</div>`).join("")}</div>` : '<p class="m-vide">Aucun output atteint à ce jour.</p>'}
-        ${autres.length ? `<div class="m-reste"><h5>Autres outputs · ${autres.length}</h5><ul class="m-autres">${autres.map((t) => `<li><span class="m-pastille" style="background:${OUT_M[t.statut]}"></span>
-          <span>${esc(t.libelle_court || t.cible)}${chiffreCle(t) ? ` <b>${esc(chiffreCle(t))}</b>` : ""}</span><em>${STATUTS_OUT[t.statut]}</em></li>`).join("")}</ul></div>` : ""}</section>`;
+        ${at.length ? `<div class="m-cartes">${at.map((t) => carteOutput(t)).join("")}</div>` : '<p class="m-vide">Aucun output atteint à ce jour.</p>'}
+        ${autres.length ? `<h4 class="m-section m-section-2">Autres outputs <span class="m-section-n">${autres.length}</span></h4>
+          <div class="m-cartes">${autres.map((t) => carteOutput(t)).join("")}</div>` : ""}</section>`;
 
       // zones : carte uniquement pour le Big Win 1 (BW 1.1 et BW 1.2)
       if (!/^BW 1\./.test(b.code)) return;
@@ -467,7 +485,7 @@
               ${z.l.length ? `<span class="m-gros">${c.atteint}/${z.l.length}</span><div>${barreM(segsOut(c), z.l.length)}<small>${resumeOut(c)}</small></div>` : '<span class="m-vide">Aucun output</span>'}</div>`;
           }).join("")}
           <h5 class="m-sous-titre">Outputs atteints dans les zones</h5>
-          ${atZ.length ? `<ul class="m-liste">${atZ.map((t) => `<li>${esc(t.libelle_court || t.cible)} <small>${(d.zonesParOutput.get(t.id) || []).map((id) => esc(d.zoneById.get(id).nom)).join(", ")}</small></li>`).join("")}</ul>` : '<p class="m-vide">Aucun output localisé n’est encore atteint.</p>'}
+          ${atZ.length ? `<ul class="m-liste">${atZ.map((t) => `<li>${esc(objectifOut(t))} <small>${(d.zonesParOutput.get(t.id) || []).map((id) => esc(d.zoneById.get(id).nom)).join(", ")}</small></li>`).join("")}</ul>` : '<p class="m-vide">Aucun output localisé n’est encore atteint.</p>'}
         </div></div></section>`;
     });
 
@@ -481,7 +499,7 @@
       <h2 class="m-titre">À retenir</h2><div class="m-retenir">
       <div class="m-ret"><div class="m-ret-tete"><b style="color:${M.vert}">${ca.completee}</b><span>Acquis<small>activités finalisées sur ${acts.length}</small></span></div>
         <ul><li>${pct(ca.completee, acts.length)} % des activités finalisées (${ca.completee} sur ${acts.length})</li><li>${co.atteint} outputs atteints sur ${outs.length}</li>
-        ${chiffres.map((t) => `<li><b>${esc(chiffreCle(t))}</b> : ${esc(t.libelle_court || t.cible)}</li>`).join("")}</ul></div>
+        ${chiffres.map((t) => `<li><b>${esc(chiffreCle(t))}</b> ${t.chiffre_libelle ? esc(t.chiffre_libelle) : ": " + esc(objectifOut(t))}</li>`).join("")}</ul></div>
       <div class="m-ret"><div class="m-ret-tete"><b style="color:${M.ambre}">${enCours.length}</b><span>En cours<small>activités</small></span></div>
         <ul>${enCours.map((t) => `<li><b>${esc(bwDe(t))}</b> : ${esc(court(t.libelle, 90))}</li>`).join("") || "<li>Aucune</li>"}</ul></div>
       <div class="m-ret"><div class="m-ret-tete"><b style="color:${M.rouge}">${nonDem.length}</b><span>Non démarrées<small>activités</small></span></div>
@@ -515,7 +533,7 @@
         quoi = "Activité « " + esc(court(t ? t.libelle : "#" + e.objet_id, 70)) + " »";
       } else if (e.objet === "output") {
         const t = d.outputs.find((y) => y.id === e.objet_id);
-        quoi = "Output « " + esc(court(t ? t.libelle_court || t.cible : "#" + e.objet_id, 70)) + " »";
+        quoi = "Output « " + esc(court(t ? objectifOut(t) : "#" + e.objet_id, 70)) + " »";
       } else {
         const ind = d.indicateurs.find((y) => y.id === e.objet_id);
         quoi = "Indicateur « " + esc(ind ? ind.libelle : "#" + e.objet_id) + " » " + esc(e.champ);
@@ -576,6 +594,8 @@
     return z.length ? z.map((x) => `<span class="chip chip-${esc(x.type)}">${esc(x.nom)}</span>`).join("") : '<span class="vide">Transversal</span>';
   }
 
+  const t2 = (x) => (x ? `<span class="out-cle-lib">${esc(x)}</span>` : "");
+
   function renderOutputs() {
     const d = S.data;
     const outs = outputsFiltres();
@@ -591,15 +611,17 @@
       const ob = outs.filter((o) => o.big_win_id === b.id);
       const vis = ob.filter((o) => (!fs || o.statut === fs) &&
         (!fz || (fz === "transversal" ? !(d.zonesParOutput.get(o.id) || []).length : (d.zonesParOutput.get(o.id) || []).includes(+fz))) &&
-        (!q || [o.cible, o.valeur_realisee, o.commentaire].join(" ").toLowerCase().includes(q)));
+        (!q || [o.cible, o.objectif_clair, o.resultat_clair, o.valeur_realisee, o.commentaire].join(" ").toLowerCase().includes(q)));
       if (!vis.length) return;
       const at = ob.filter((o) => o.statut === "atteint").length;
       html += `<tr class="grp"><td colspan="5"><b>${esc(titreBW(b))} :</b> <span class="grp-nom">${esc(b.libelle)}</span><br><small>${ob.length} output(s) · ${pct(at, ob.length)} % atteints</small></td></tr>`;
       vis.forEach((o) => {
         const edit = peutModifierOutput(o);
         const maj = o.updated_by && o.updated_by !== "Import Excel" ? `<span class="maj">MàJ ${fmtDate(o.updated_at)} · ${esc(o.updated_by)}</span>` : "";
-        html += `<tr><td>${esc(o.cible)}</td><td>${o.valeur_realisee ? esc(o.valeur_realisee) : '<span class="vide">À compléter</span>'}</td>
-          <td class="st"><span class="badge st-${o.statut}">${STATUTS_OUT[o.statut]}</span>${maj}
+        const res = resultatOut(o), cle = chiffreCle(o);
+        html += `<tr><td>${esc(objectifOut(o))}${o.objectif_clair ? `<span class="maj" title="Formulation d'origine">${esc(o.cible)}</span>` : ""}</td>
+          <td>${cle && cle !== "Fait" ? `<b class="out-cle">${esc(cle)}</b> ${t2(o.chiffre_libelle)}<br>` : ""}${res ? esc(res) : '<span class="vide">À compléter</span>'}</td>
+          <td class="st"><span class="badge st-${o.statut}">${STATUT_SIMPLE[o.statut]}</span>${maj}
             ${edit ? `<br><button class="btn btn-outline btn-small" data-out-edit="${o.id}" style="margin-top:6px">Mettre à jour</button>` : ""}</td>
           <td>${chipsZones(o)}</td><td class="comm">${esc(o.commentaire || "")}</td></tr>`;
       });
@@ -797,6 +819,10 @@
     $("#form-output").dataset.valeurInitiale = o.valeur_realisee || "";
     $("#form-output").dataset.cleInitiale = o.valeur_cle || "";
     $("#out-court").value = o.libelle_court || "";
+    $("#out-obj").value = o.objectif_clair || "";
+    $("#out-res").value = o.resultat_clair || "";
+    $("#out-lib").value = o.chiffre_libelle || "";
+    $("#form-output").dataset.resInitial = o.resultat_clair || "";
     const zs = S.data.zonesParOutput.get(o.id) || [];
     $("#out-zones").innerHTML = S.data.zones.map((z) => `<label><input type="checkbox" value="${z.id}"${zs.includes(z.id) ? " checked" : ""}> ${esc(z.nom)}</label>`).join("");
     $("#out-err").textContent = "";
@@ -944,6 +970,11 @@
           p_valeur_cle: ($("#out-valeur").value !== e.target.dataset.valeurInitiale && $("#out-cle").value === e.target.dataset.cleInitiale)
             ? "" : $("#out-cle").value,
           p_libelle_court: $("#out-court").value,
+          p_objectif_clair: $("#out-obj").value,
+          p_chiffre_libelle: $("#out-lib").value,
+          // valeur réalisée modifiée sans réécrire le résultat en clair : on affiche la nouvelle valeur
+          p_resultat_clair: ($("#out-valeur").value !== e.target.dataset.valeurInitiale && $("#out-res").value === e.target.dataset.resInitial)
+            ? "" : $("#out-res").value,
         });
         fermerDialogues();
         await rafraichir();

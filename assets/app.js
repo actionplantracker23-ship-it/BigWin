@@ -296,17 +296,7 @@
     return o.valeur_cle || extraireChiffre(o.valeur_realisee) || (o.statut === "atteint" ? "Fait" : "");
   }
 
-  function bulletsStrategie(acts) {
-    const vus = new Set(), lignes = [];
-    acts.filter((a) => a.statut === "completee").forEach((a) => {
-      String(a.commentaire || "").split(/\n+/).map((l) => l.replace(/^[\s\-•*]+/, "").trim()).filter((l) => l.length > 3).forEach((l) => {
-        const k = l.toLowerCase();
-        if (!vus.has(k)) { vus.add(k); lignes.push(l); }
-      });
-    });
-    if (!lignes.length) acts.filter((a) => a.statut === "completee").forEach((a) => lignes.push(a.libelle));
-    return lignes;
-  }
+
 
   function enteteBW(b, a, deps, etiquette) {
     const c = compter(a, Object.keys(STATUTS_ACT));
@@ -435,9 +425,16 @@
           const as = a.filter((t) => t.strategy_id === s.id);
           const nf = as.filter((t) => t.statut === "completee").length;
           if (!nf) return "";
-          const lignes = bulletsStrategie(as);
+          // une puce par activité finalisée (le nombre affiché = nombre de puces) ; « ce qui a été fait » en dessous
+          const vus = new Set();
+          const puces = as.filter((t) => t.statut === "completee").map((t) => {
+            const c = String(t.commentaire || "").trim();
+            const cle = c.toLowerCase();
+            const fait = c && !vus.has(cle) ? (vus.add(cle), c) : "";
+            return `<li><span class="m-act">${esc(court(t.libelle, 140))}</span>${fait ? `<small class="m-fait">${esc(court(fait.replace(/\s*\n+\s*/g, " · "), 220))}</small>` : ""}</li>`;
+          });
           return `<div class="m-strat"><div class="m-strat-tete"><b>${nf}</b><span>${esc(s.titre_court || court(s.libelle, 80))}</span></div>
-            <ul>${lignes.slice(0, 6).map((l) => `<li>${esc(court(l, 170))}</li>`).join("")}${lignes.length > 6 ? `<li class="m-plus">+ ${lignes.length - 6} autres</li>` : ""}</ul></div>`;
+            <ul>${puces.join("")}</ul></div>`;
         }).join("")}</div>` : '<p class="m-vide">Aucune activité finalisée à ce jour.</p>'}
         ${[["en_cours", "En cours"], ["non_demarree", "Non démarrées"], ["reportee", "Reportées / annulées"]].map(([k, titre]) => {
           const l = a.filter((t) => (k === "reportee" ? ["reportee", "annulee"].includes(t.statut) : t.statut === k));

@@ -477,3 +477,6 @@ table.m-table.m-dep { min-width: 0; table-layout: auto; }
 @media (min-width: 901px) { .m-graphes { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
 .m-dep .m-dep-barre { width: 30%; }
 .m-dep th:nth-child(n+3), .m-dep td:nth-child(n+3) { width: 1%; white-space: nowrap; }
+
+.m-strat li .m-act { display: block; }
+.m-strat li .m-fait { display: block; color: #6D6E71; font-size: 13px; line-height: 1.35; margin-top: 3px; padding-left: 8px; border-left: 2px solid #E1E6EC; }

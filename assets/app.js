@@ -373,7 +373,7 @@
       // outputs du département : ceux de ses stratégies (ou de ses Big Wins quand l'output n'a pas de stratégie)
       const o = outs.filter((t) => (t.strategy_id ? ids.has(t.strategy_id) : bws.has(t.big_win_id)));
       return { dep, a, o, c: compter(a, Object.keys(STATUTS_ACT)), co: compter(o, Object.keys(STATUTS_OUT)) };
-    }).filter((x) => x.a.length || x.o.length).sort((p, q) => q.a.length - p.a.length);
+    }).filter((x) => x.a.length).sort((p, q) => q.a.length - p.a.length);
     const maxDep = Math.max(1, ...deps.map((x) => x.a.length));
     const parts = [{ l: "Finalisées", n: ca.completee, c: M.vert }, { l: "En cours", n: ca.en_cours, c: M.ambre },
       { l: "Non démarrées", n: ca.non_demarree, c: M.rouge }, { l: "Reportées / annulées", n: ca.reportee + ca.annulee, c: M.grisStatut }].filter((p) => p.n || p.l !== "Reportées / annulées");
@@ -404,30 +404,28 @@
             <text x="90" y="106" text-anchor="middle" font-size="10" fill="${M.gris}">finalisées</text></svg>
           <ul>${parts.map((p) => `<li><i style="background:${p.c}"></i>${p.l}<b>${p.n}</b><small>${pct(p.n, acts.length)} %</small></li>`).join("")}</ul></div></div>
         <div class="m-graphe m-graphe-large"><h4>Activités Big Win à mettre en œuvre</h4>${nuageMots(acts)}</div>
-        <div class="m-graphe m-graphe-large"><h4>Activités et outputs par département : nombre, statut et taux d'achèvement</h4>
+        <div class="m-graphe m-graphe-large"><h4>Activités par département : nombre, statut et taux d'achèvement</h4>
           <div class="table-wrap"><table class="m-table m-dep"><thead><tr>
-            <th>Département</th><th>Activités par statut</th><th>Fin.</th><th>En cours</th><th>Non dém.</th><th>Achèvement activités</th>
-            <th>Outputs par statut</th><th>Atteints</th><th>Achèvement outputs</th></tr></thead><tbody>
+            <th>Département</th><th>Activités par statut</th><th>Finalisées</th><th>En cours</th><th>Non démarrées</th><th>Taux d'achèvement</th><th></th></tr></thead><tbody>
           ${deps.map((x) => {
             const nd = x.c.non_demarree + x.c.reportee + x.c.annulee;
-            return `<tr><td>${esc(x.dep.libelle)}</td>
+            const lien = (statut, n) => `<button type="button" class="m-lien" data-voir-dep="${esc(x.dep.code)}" data-voir-statut="${statut}"
+              title="Voir ces activités dans la synthèse des activités">${n}</button>`;
+            return `<tr class="m-dep-ligne" data-voir-dep="${esc(x.dep.code)}" data-voir-statut="" title="Voir et mettre à jour les activités de ce département">
+              <td><b class="m-dep-nom">${esc(x.dep.libelle)}</b></td>
               <td class="m-dep-barre"><div class="m-dep-l"><div class="m-dep-zone"><div style="width:${(100 * x.a.length) / maxDep}%">${x.a.length ? barreM(segsAct(x.c), x.a.length) : ""}</div></div><b>${x.a.length}</b></div></td>
-              <td class="m-n">${x.c.completee}</td><td class="m-n">${x.c.en_cours}</td><td class="m-n">${nd}</td>
+              <td class="m-n">${lien("completee", x.c.completee)}</td><td class="m-n">${lien("en_cours", x.c.en_cours)}</td><td class="m-n">${lien("non_demarree", nd)}</td>
               <td class="m-n">${tauxBadge(x.c.completee, x.a.length)}</td>
-              <td class="m-dep-barre">${x.o.length ? barreM(segsOut(x.co), x.o.length) : '<span class="m-vide">aucun</span>'}</td>
-              <td class="m-n">${x.co.atteint}<small>/${x.o.length}</small></td>
-              <td class="m-n">${tauxBadge(x.co.atteint, x.o.length)}</td></tr>`;
+              <td class="m-n"><span class="m-maj">Mettre à jour →</span></td></tr>`;
           }).join("")}
           <tr class="m-total"><td>Total (sans double compte)</td><td class="m-dep-barre"><div class="m-dep-l"><div class="m-dep-zone">${barreM(segsAct(ca), Math.max(acts.length, 1))}</div><b>${acts.length}</b></div></td>
             <td class="m-n">${ca.completee}</td><td class="m-n">${ca.en_cours}</td><td class="m-n">${ca.non_demarree + ca.reportee + ca.annulee}</td>
-            <td class="m-n">${tauxBadge(ca.completee, acts.length)}</td><td class="m-dep-barre">${barreM(segsOut(co), Math.max(outs.length, 1))}</td>
-            <td class="m-n">${co.atteint}<small>/${outs.length}</small></td><td class="m-n">${tauxBadge(co.atteint, outs.length)}</td></tr>
-          </tbody></table></div>
-          <div class="m-legende"><b style="color:#004D84">Outputs :</b>${[["Atteint", M.vert], ["Partiel", M.ambreClair], ["En cours", M.ambre], ["Non atteint", M.rouge], ["Non renseigné", M.grisStatut]]
-            .map(([l, c]) => `<span><i style="background:${c}"></i>${l}</span>`).join("")}</div>
-          <p class="m-note">Taux d'achèvement = activités finalisées / activités du département ; outputs atteints / outputs du département.
-            Une activité ou un output porté par plusieurs départements est compté pour chacun ; la ligne Total les compte une seule fois.
-            Couleur du taux : vert ≥ 75 %, ambre 50 à 74 %, rouge &lt; 50 %.</p></div>
+            <td class="m-n">${tauxBadge(ca.completee, acts.length)}</td><td></td></tr>
+          </tbody></table></div>${legendeAct()}
+          <p class="m-note">Données liées à la synthèse des activités : chaque mise à jour d'activité met ce tableau à jour.
+            Cliquez sur un département (ou sur un nombre) pour ouvrir ses activités dans « Synthèse des activités » et les mettre à jour.
+            Taux d'achèvement = activités finalisées / activités du département ; une activité portée par plusieurs départements est comptée pour chacun,
+            la ligne Total la compte une seule fois. Couleur du taux : vert ≥ 75 %, ambre 50 à 74 %, rouge &lt; 50 %.</p></div>
       </div></section>`;
 
     // 4. Chaque Big Win : activités, outputs atteints, zones
@@ -850,6 +848,18 @@
       if (b.dataset.goto === "nouvelle") { allerA("activites"); ouvrirNouvelle(); } else allerA(b.dataset.goto);
     }));
     $("#btn-refresh").addEventListener("click", () => rafraichir("Données actualisées"));
+    $("#rapport").addEventListener("click", (e) => {
+      const el = e.target.closest("[data-voir-dep]");
+      if (!el) return;
+      e.stopPropagation();
+      S.dep = el.dataset.voirDep;
+      $("#filtre-dep").value = S.dep;
+      $("#filtre-statut-act").value = el.dataset.voirStatut || "";
+      $("#recherche-act").value = "";
+      renderTout();
+      allerA("activites");
+      toast("Activités : " + $("#filtre-dep").selectedOptions[0].textContent + (el.dataset.voirStatut ? " · " + STATUTS_ACT[el.dataset.voirStatut] : ""));
+    });
     $("#rap-sous").addEventListener("click", (e) => {
       const b = e.target.closest("button[data-sous]");
       if (!b) return;

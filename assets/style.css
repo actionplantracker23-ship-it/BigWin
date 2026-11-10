@@ -455,3 +455,13 @@ table.m-table { width: 100%; border-collapse: collapse; min-width: 720px; }
 .rap-sous button.actif { color: #004D84; border-bottom-color: #F7941D; font-weight: 700; }
 
 .bandeau-maj { color: var(--muted); font-size: 14px; white-space: nowrap; }
+
+/* Tableau par département : lien vers la synthèse des activités */
+.m-dep-ligne { cursor: pointer; }
+.m-dep-ligne:hover td { background: #F5F8FB; }
+.m-dep-nom { color: #004D84; font-weight: 700; }
+.m-lien { font: inherit; font-weight: 700; color: #004D84; background: none; border: 0; padding: 2px 6px; cursor: pointer;
+  text-decoration: underline; text-decoration-color: #C9D6E2; text-underline-offset: 3px; }
+.m-lien:hover { color: #F7941D; text-decoration-color: #F7941D; }
+.m-maj { color: #F7941D; font-size: 13px; white-space: nowrap; }
+.m-dep { min-width: 760px; }

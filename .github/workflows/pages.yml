@@ -35,6 +35,8 @@ jobs:
           fi
           mkdir site && cp -r index.html assets data site/
           rm -f site/assets/config.example.js
+          # Numéro de version : force le navigateur à recharger CSS et JS à chaque publication
+          sed -i "s/__VERSION__/${GITHUB_SHA::8}/g" site/index.html
           printf 'window.BIGWIN_CONFIG = { supabaseUrl: "%s", supabaseKey: "%s", pays: "Burkina Faso", annee: 2026 };\n' \
             "$SUPABASE_URL" "$SUPABASE_KEY" > site/assets/config.js
       - uses: actions/configure-pages@v5

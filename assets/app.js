@@ -383,7 +383,7 @@
             ? `<select class="badge st-${a.statut}" data-act-statut="${a.id}" aria-label="Statut">${Object.entries(STATUTS_ACT).map(([k, v]) => `<option value="${k}"${k === a.statut ? " selected" : ""}>${v}</option>`).join("")}</select>`
             : `<span class="badge st-${a.statut}">${STATUTS_ACT[a.statut]}</span>`;
           const comm = edit
-            ? `<textarea class="comm-edit" rows="2" data-act-comm="${a.id}" placeholder="Ajouter un commentaire…">${esc(a.commentaire || "")}</textarea>`
+            ? `<textarea class="comm-edit" rows="${Math.min(8, Math.max(2, Math.ceil((a.commentaire || "").length / 45) + (a.commentaire || "").split("\n").length - 1))}" data-act-comm="${a.id}" placeholder="Ajouter un commentaire…">${esc(a.commentaire || "")}</textarea>`
             : esc(a.commentaire || "");
           const maj = a.updated_by && a.updated_by !== "Import Excel" ? `<span class="maj">MàJ ${fmtDate(a.updated_at)} · ${esc(a.updated_by)}</span>` : "";
           corps += `<tr>${i === 0 ? stratCell : ""}<td>${esc(a.libelle)}</td>${i === 0 ? `<td class="dep" rowspan="${acts.length}">${deps}</td>` : ""}

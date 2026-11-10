@@ -154,7 +154,8 @@ table.suivi td.strat details p { white-space: pre-line; font-size: 13px; color: 
 table.suivi td.dep { width: 130px; }
 table.suivi td.ech { width: 100px; color: var(--muted); }
 table.suivi td.st { width: 150px; }
-table.suivi td.comm { width: 260px; }
+table.suivi td.comm { width: 300px; white-space: pre-line; font-size: 14px; }
+table.suivi td.comm textarea { white-space: pre-wrap; }
 .vide { color: #b0b6bc; }
 .maj { display: block; color: var(--muted); font-size: 12px; margin-top: 4px; }
 

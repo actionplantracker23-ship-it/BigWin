@@ -135,6 +135,36 @@ def noms_complets(wb, code, libelle_synthese):
     return titre, lib, org or None
 
 
+def cle_activite(t):
+    return re.sub(r"[^a-z0-9]", "", (t or "").lower())[:80]
+
+
+def commentaires_activites(wb):
+    """Commentaires « ce qui est réellement fait » par activité.
+
+    Feuille « BF Review - Statut » : col. O = commentaire des activités complétées (col. K),
+    col. P = commentaire des activités en cours (col. L). Quand une ligne a un commentaire P
+    mais aucune activité en cours, il complète celui des activités complétées.
+    """
+    ws = wb["BF Review - Statut"]
+    res = {}
+
+    def ajoute(acts, texte):
+        texte = (texte or "").strip()
+        if not texte:
+            return
+        for act in acts:
+            k = cle_activite(act)
+            res[k] = (res[k] + "\n" + texte) if k in res else texte
+
+    for r in range(7, ws.max_row + 1):
+        k_acts, l_acts = puces(ws.cell(r, 11).value), puces(ws.cell(r, 12).value)
+        o, p = propre(ws.cell(r, 15).value), propre(ws.cell(r, 16).value)
+        ajoute(k_acts, o)
+        ajoute(l_acts if l_acts else k_acts, p)
+    return res
+
+
 def lire(chemin):
     """Lit le classeur et renvoie un dict prêt à être inséré."""
     wb = openpyxl.load_workbook(chemin, data_only=True)
@@ -143,6 +173,7 @@ def lire(chemin):
             "zones": [{"code": c, "nom": n, "type": t, "province": p, "lat": la, "lon": lo, "ordre": i}
                       for i, (c, n, t, p, la, lo) in enumerate(ZONES)],
             "big_wins": [], "strategies": [], "activites": [], "outputs": []}
+    comms = commentaires_activites(wb)
     bw_courant = None
     strat_ordre = {}
     ligne_vers_strat = {}
@@ -173,7 +204,8 @@ def lire(chemin):
             for act in puces(ws.cell(r, col).value):
                 n += 1
                 data["activites"].append({"strat": cle, "ordre": n, "libelle": act,
-                                          "statut": statut, "echeance": echeance(act)})
+                                          "statut": statut, "echeance": echeance(act),
+                                          "commentaire": comms.get(cle_activite(act))})
 
     wo = wb["Synthèse Outputs"]
     for r in range(5, wo.max_row + 1):
@@ -227,9 +259,9 @@ begin
   from _s s join public.big_wins b on b.code = s.bw order by s.cle;
   update _s set id = st.id from public.strategies st where st.ref_source = _s.ref_source;
 
-  insert into public.activites(strategy_id, ordre, libelle, statut, echeance, updated_by)
-  select s.id, a.ordre, a.libelle, a.statut, a.echeance, 'Import Excel'
-  from jsonb_to_recordset(j->'activites') as a(strat int, ordre int, libelle text, statut text, echeance text)
+  insert into public.activites(strategy_id, ordre, libelle, statut, echeance, commentaire, updated_by)
+  select s.id, a.ordre, a.libelle, a.statut, a.echeance, a.commentaire, 'Import Excel'
+  from jsonb_to_recordset(j->'activites') as a(strat int, ordre int, libelle text, statut text, echeance text, commentaire text)
   join _s s on s.cle = a.strat order by a.strat, a.ordre;
 
   insert into public.outputs(big_win_id, strategy_id, ref_source, ordre, cible, valeur_realisee, statut, commentaire, updated_by)

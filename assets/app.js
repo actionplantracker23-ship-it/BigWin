@@ -105,7 +105,7 @@
     const r = await rpc("charger_donnees", { p_code: S.session.code });
     S.session.dep = r.departement;
     const { departements, big_wins, strategies, activites, outputs, zones, output_zones, indicateurs, indicateur_valeurs, historique } = r;
-    const d = { departements, big_wins, strategies, activites, outputs, zones, output_zones, indicateurs, indicateur_valeurs, historique };
+    const d = { departements, big_wins, strategies, activites, outputs, zones, output_zones, indicateurs, indicateur_valeurs, historique , a_retenir: r.a_retenir || [] };
     d.bwById = new Map(big_wins.map((b) => [b.id, b]));
     d.stratById = new Map(strategies.map((s) => [s.id, s]));
     d.zoneById = new Map(zones.map((z) => [z.id, z]));
@@ -364,6 +364,30 @@
     </div>`;
   }
 
+  // « À retenir » : leçons apprises et cibles des outputs pour les prochaines années (table a_retenir)
+  function blocLecons() {
+    const r = (S.data.a_retenir || []);
+    const v = (x, champ) => (S.lang === "en" ? x[champ + "_en"] || x[champ + "_fr"] : x[champ + "_fr"]) || "";
+    const lecons = r.filter((x) => x.section === "lecon").slice(0, 5);
+    const cibles = r.filter((x) => x.section === "cible");
+    const SENS = { baisser: ["Moins ambitieux", "#F2B01E", "↓"], relever: ["Plus ambitieux", "#2E9E4F", "↑"], reformuler: ["À reformuler", "#4FB3E3", "↻"] };
+    let h = "";
+    if (lecons.length) {
+      h += `<h3 class="m-sous-section">Leçons apprises</h3><ol class="m-lecons">${lecons.map((x, i) => `<li>
+        <span class="m-lecon-n">${i + 1}</span><div><b>${esc(v(x, "titre"))}</b><p>${esc(v(x, "texte"))}</p></div></li>`).join("")}</ol>`;
+    }
+    if (cibles.length) {
+      h += `<h3 class="m-sous-section">Fixer les outputs des prochaines années</h3>
+        <p class="m-intro-cibles">Propositions à partir des résultats ${CFG.annee} : être moins ambitieux là où l'écart est trop grand, plus ambitieux là où la cible a été largement dépassée, et reformuler les outputs qui dépendent de décisions hors de notre contrôle.</p>
+        <div class="table-wrap"><table class="m-table m-cibles"><thead><tr><th>Output</th><th>Cible ${CFG.annee}</th><th>Résultat ${CFG.annee}</th><th>Proposition</th><th>Pourquoi</th></tr></thead><tbody>
+        ${cibles.map((x) => { const [lib, coul, fl] = SENS[x.sens] || ["", "#999", ""];
+          return `<tr><td><b>${esc(v(x, "titre"))}</b><br><span class="m-sens" style="background:${coul}">${fl} ${lib}</span></td>
+            <td>${esc(v(x, "cible"))}</td><td class="m-res-c">${esc(v(x, "resultat"))}</td><td><b>${esc(v(x, "proposition"))}</b></td><td class="m-pourquoi">${esc(v(x, "texte"))}</td></tr>`; }).join("")}
+        </tbody></table></div>`;
+    }
+    return h;
+  }
+
   function renderStats() {
     const d = S.data;
     const strats = stratsFiltrees();
@@ -523,7 +547,7 @@
       <div class="m-ret"><div class="m-ret-tete"><b style="color:${M.rouge}">${nonDem.length}</b><span>Non démarrées<small>activités</small></span></div>
         <ul>${nonDem.map((t) => `<li><b>${esc(bwDe(t))}</b> : ${esc(court(L(t), 90))}</li>`).join("") || "<li>Aucune</li>"}</ul>
         ${reportees.length ? `<h5 class="m-ret-sous">Reportées / annulées · ${reportees.length}</h5><ul>${reportees.map((t) => `<li><b>${esc(bwDe(t))}</b> : ${esc(court(L(t), 90))}</li>`).join("")}</ul>` : ""}</div>
-      </div></section>`;
+      </div>${blocLecons()}</section>`;
 
     $("#rapport").innerHTML = h;
     // Chaque diapo appartient à une partie : seule la partie sélectionnée est affichée

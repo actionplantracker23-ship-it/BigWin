@@ -501,3 +501,19 @@ table.m-table.m-dep { min-width: 0; table-layout: auto; }
 .lang-btn:hover { background: rgba(255,255,255,.15); }
 .lang-btn-login { color: var(--primaire); border-color: #c9d6e2; justify-self: center; margin-top: 4px; }
 .lang-btn-login:hover { background: var(--primaire-pale); }
+
+/* À retenir : leçons apprises et cibles futures */
+.m-sous-section { font-size: 21px; color: #004D84; margin: 30px 0 12px; padding-bottom: 6px; border-bottom: 2px solid #004D84; }
+.m-lecons { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+.m-lecons li { display: grid; grid-template-columns: 44px 1fr; gap: 14px; align-items: start; background: #F5F8FB; padding: 14px 16px; }
+.m-lecon-n { width: 40px; height: 40px; border-radius: 50%; background: #F7941D; color: #fff; font-weight: 700; font-size: 20px;
+  display: grid; place-items: center; }
+.m-lecons b { color: #004D84; font-size: 16.5px; }
+.m-lecons p { margin: 4px 0 0; font-size: 14.5px; line-height: 1.45; }
+.m-intro-cibles { color: #6D6E71; font-size: 14px; margin: 0 0 10px; }
+.m-cibles { min-width: 860px; }
+.m-cibles th { text-align: left !important; }
+.m-cibles td { font-size: 14px; vertical-align: top; }
+.m-sens { display: inline-block; margin-top: 6px; color: #fff; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 3px; }
+.m-res-c { color: #004D84; font-weight: 700; white-space: nowrap; }
+.m-pourquoi { color: #6D6E71; }

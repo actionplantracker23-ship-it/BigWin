@@ -59,31 +59,12 @@
 
     <!-- STATISTIQUES -->
     <section id="tab-stats" class="tab-panel">
-      <div class="kpis" id="kpis"></div>
-
-      <article class="planet">
-        <h2 class="planet-title">État de mise en œuvre des Big Wins</h2>
-        <p class="planet-intro" id="intro"></p>
-        <div class="planet-table" id="planet"></div>
-        <p class="notes">
-          <sup>1</sup> Nombre d'activités et d'outputs du plan 2026, feuille « Synthèse par Big Win ».
-          <sup>2</sup> Part des activités complétées (<span class="c-act">bleu</span>) et des outputs atteints
-          (<span class="c-out">bordeaux</span>) à chaque mise à jour enregistrée.
-          <sup>3</sup> Zones d'intervention des outputs, colorées selon leur état : <b class="c-ok">atteint</b>,
-          <b class="c-wip">en cours / partiel</b>, <b class="c-ko">non atteint</b>.
-        </p>
+      <nav class="rap-nav" id="rap-nav" aria-label="Sections du rapport"></nav>
+      <div class="rapport" id="rapport"></div>
+      <article class="card">
+        <h3 class="card-title">Dernières mises à jour</h3>
+        <ul class="historique" id="historique"></ul>
       </article>
-
-      <div class="grid-2">
-        <article class="card">
-          <h3 class="card-title">Récapitulatif par département responsable</h3>
-          <div id="recap-dep"></div>
-        </article>
-        <article class="card">
-          <h3 class="card-title">Dernières mises à jour</h3>
-          <ul class="historique" id="historique"></ul>
-        </article>
-      </div>
     </section>
 
     <!-- ACTIVITES -->
@@ -209,6 +190,10 @@
       <p class="dlg-sub" id="out-cible"></p>
       <label>Statut <select id="out-statut"></select></label>
       <label>Valeur réalisée <textarea id="out-valeur" rows="2"></textarea></label>
+      <div class="row-2">
+        <label>Chiffre clé affiché <input id="out-cle" placeholder="ex. 83,44 % ou Fait"></label>
+        <label>Libellé court (français) <input id="out-court"></label>
+      </div>
       <label>Commentaire <textarea id="out-comm" rows="2"></textarea></label>
       <fieldset><legend>Zones d'intervention</legend><div id="out-zones" class="zones-check"></div></fieldset>
       <p class="form-err" id="out-err"></p>

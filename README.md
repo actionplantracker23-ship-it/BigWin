@@ -11,7 +11,7 @@ complétée par **« Synthèse Outputs »** (cible, valeur réalisée, statut de
 
 | Onglet | Contenu |
 |---|---|
-| **Statistiques** | Chiffres clés ; tableau « état de mise en œuvre » par Big Win : avancement des activités et des outputs, évolution dans le temps, carte des zones d'intervention colorée selon l'état des outputs ; récapitulatif par département ; dernières mises à jour |
+| **Statistiques** | Rapport présenté comme le modèle PowerPoint « Mise à jour des Big Wins » : vue d’ensemble, chiffres clés, zones d’intervention, puis pour chaque Big Win les activités finalisées (par stratégie, d’près les commentaires « ce qui a été fait »), les outputs atteints (chiffre clé) et la carte des zones ; enfin « À retenir ». Données en direct |
 | **Synthèse des activités** | Tableau par Big Win et stratégie. Une fois connecté, chaque département change le **statut** (complétée, en cours, non démarrée, reportée, annulée) et le **commentaire** de ses activités, ou ajoute une activité |
 | **Outputs** | Cible, valeur réalisée, statut, zones et commentaire de chaque output, modifiables par le département responsable |
 | **Carte & indicateurs** | Carte du Burkina Faso avec les zones de mise en œuvre (**Ziniaré**, **Manga**, **Zorgho**), tableau par zone, et indicateurs par zone (à ajouter) |

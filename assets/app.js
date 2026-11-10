@@ -143,53 +143,6 @@
       "</div>";
   }
 
-  // Reconstitue l'évolution du % (activités complétées / outputs atteints) à partir du journal.
-  function serie(objet, items, cible, bwId) {
-    const evts = S.data.historique
-      .filter((h) => h.objet === objet && h.champ === "statut" && (bwId == null || h.big_win_id === bwId))
-      .filter((h) => items.some((i) => i.id === h.objet_id))
-      .slice()
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    const etat = new Map(items.map((i) => [i.id, i.statut]));
-    const val = () => pct([...etat.values()].filter((st) => st === cible).length, items.length);
-    let cur = val();
-    const pts = [{ t: Date.now(), v: cur }];
-    evts.forEach((h) => {            // du plus récent au plus ancien
-      pts.push({ t: new Date(h.created_at).getTime(), v: cur });
-      etat.set(h.objet_id, h.ancien); // on annule l'événement
-      cur = val();
-    });
-    const plusAncien = evts.length ? new Date(evts[evts.length - 1].created_at).getTime() : Date.now();
-    pts.push({ t: plusAncien - 864e5 * 7, v: cur }); // situation de départ (import Excel)
-    return pts.reverse();
-  }
-
-  function evolution(sA, sO) {
-    const W = 230, H = 116, L = 34, R = 8, T = 18, B = 22;
-    const tous = sA.concat(sO).map((p) => p.t);
-    let t0 = Math.min(...tous), t1 = Math.max(...tous);
-    if (t1 - t0 < 864e5) t0 = t1 - 864e5 * 30;
-    const x = (t) => L + ((t - t0) / (t1 - t0)) * (W - L - R);
-    const y = (v) => T + (1 - v / 100) * (H - T - B);
-    const grille = [0, 50, 100].map((v) =>
-      `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="#9aa1a9" stroke-dasharray="${v ? "1.5 3" : "0"}" stroke-width="${v ? 1 : 1.2}"/>` +
-      `<text x="${L - 4}" y="${y(v) + 4}" font-size="10" text-anchor="end" fill="#667079">${v} %</text>`).join("");
-    const ligne = (s, c) => {
-      const d = s.map((p, i) => (i ? "L" : "M") + x(p.t).toFixed(1) + "," + y(p.v).toFixed(1)).join("");
-      return `<path d="${d}" fill="none" stroke="${c}" stroke-width="2"/>` +
-        s.map((p) => `<circle cx="${x(p.t).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="3.2" fill="${c}"><title>${p.v} % · ${new Date(p.t).toLocaleDateString("fr-FR")}</title></circle>`).join("");
-    };
-    const mois = (t) => new Date(t).toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
-    const fin = sA[sA.length - 1].v, finO = sO[sO.length - 1].v;
-    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Activités complétées ${fin} %, outputs atteints ${finO} %">${grille}` +
-      `<text x="${L}" y="${H - 6}" font-size="10" fill="#667079">${mois(t0)}</text>` +
-      `<text x="${W - R}" y="${H - 6}" font-size="10" fill="#667079" text-anchor="end">${mois(t1)}</text>` +
-      ligne(sO, "var(--c-out)") + ligne(sA, "var(--c-act)") +
-      `<text x="${W - R}" y="${y(fin) - 6}" font-size="11" font-weight="700" text-anchor="end" fill="var(--c-act)">${fin} %</text>` +
-      `<text x="${W - R}" y="${y(finO) + 14}" font-size="11" font-weight="700" text-anchor="end" fill="var(--c-out)">${finO} %</text>` +
-      "</svg>";
-  }
-
   function projeter(lon, lat) {
     const p = S.carte.projection;
     return [(lon - p.lon0) * p.kx * p.echelle, (p.lat0 - lat) * p.echelle];
@@ -240,14 +193,71 @@
       if (!c || z.lat == null) return;
       const [x, y] = projeter(z.lon, z.lat);
       svg += `<circle cx="${x}" cy="${y}" r="${opts.grand ? 4 : 3}" fill="#fff" stroke="${c.txt}" stroke-width="2"/>`;
-      const fs = opts.grand ? 15 : 13;
+      const fs = opts.fs || (opts.grand ? 15 : 13);
       const label = esc(z.nom) + (opts.grand && c.valeur != null ? " · " + esc(c.valeur) : "");
       svg += `<text class="zone-label" x="${x + 7}" y="${y - 6}" font-size="${fs}" fill="${c.txt}">${label}</text>`;
     });
     return svg + "</svg>";
   }
 
-  /* ---------- rendu : statistiques ---------- */
+  /* ---------- rendu : statistiques présentées comme le modèle PowerPoint ---------- */
+  const M = { bleu: "#004D84", orange: "#F7941D", ciel: "#4FB3E3", gris: "#6D6E71", clair: "#D9D9D9", texte: "#1F2A36", hors: "#E9EDF1" };
+  const ACT_M = { completee: M.orange, en_cours: M.ciel, non_demarree: M.clair, reportee: M.clair, annulee: M.clair };
+  const OUT_M = { atteint: M.bleu, partiel: M.ciel, en_cours: M.orange, non_atteint: M.gris, non_renseigne: M.clair };
+  const ZONE_M = { atteint: { fill: M.bleu, txt: M.bleu }, en_cours: { fill: M.orange, txt: "#B8620B" },
+    non_atteint: { fill: M.gris, txt: "#4A4B4E" }, non_renseigne: { fill: "#C3C6CA", txt: M.gris } };
+  const titreCourt = (b) => b.titre_court || court(b.libelle, 70);
+  const codeBW = (b) => b.code.replace(" (politiques)", " pol.");
+  const pluriel = (n, s, p) => n + " " + (n > 1 ? p : s);
+
+  function barreM(segs, total, cls = "m-bar") {
+    return `<div class="${cls}" role="img" aria-label="${esc(segs.filter((s) => s.n).map((s) => s.n + " " + s.lib).join(", "))}">` +
+      segs.map((s) => (s.n ? `<span style="width:${(100 * s.n) / total}%;background:${s.c}" title="${esc(s.lib + " : " + s.n)}"></span>` : "")).join("") + "</div>";
+  }
+  const segsAct = (c) => [
+    { n: c.completee, c: ACT_M.completee, lib: "finalisées" }, { n: c.en_cours, c: ACT_M.en_cours, lib: "en cours" },
+    { n: c.non_demarree + c.reportee + c.annulee, c: ACT_M.non_demarree, lib: "non démarrées" }];
+  const segsOut = (c) => ["atteint", "partiel", "en_cours", "non_atteint", "non_renseigne"].map((k) => ({ n: c[k], c: OUT_M[k], lib: STATUTS_OUT[k].toLowerCase() }));
+  const OUT_PL = { atteint: ["atteint", "atteints"], partiel: ["partiel", "partiels"], en_cours: ["en cours", "en cours"],
+    non_atteint: ["non atteint", "non atteints"], non_renseigne: ["non renseigné", "non renseignés"] };
+  function resumeOut(c) {
+    return ["atteint", "partiel", "en_cours", "non_atteint", "non_renseigne"].filter((k) => c[k])
+      .map((k) => c[k] + " " + OUT_PL[k][c[k] > 1 ? 1 : 0]).join(" · ");
+  }
+  function couleursZonesM(outs) {
+    const m = new Map();
+    outputsParZone(outs).forEach((l, zid) => m.set(zid, ZONE_M[etatZone(l)]));
+    return m;
+  }
+  const entete = (gauche, droite, id) => `<div class="m-entete"${id ? ` id="${id}"` : ""}><span>${gauche}</span><span>${droite || ""}</span></div>`;
+  const legendeCarte = () => `<div class="m-legende">${[["Majorité atteints", M.bleu], ["En cours / partiel", M.orange], ["Non atteints", M.gris], ["Hors zone", M.hors]]
+    .map(([l, c]) => `<span><i style="background:${c}"></i>${l}</span>`).join("")}</div>`;
+  const legendeAct = () => `<div class="m-legende">${[["Finalisées", M.orange], ["En cours", M.ciel], ["Non démarrées", M.clair]]
+    .map(([l, c]) => `<span><i style="background:${c}"></i>${l}</span>`).join("")}</div>`;
+
+  function bulletsStrategie(acts) {
+    const vus = new Set(), lignes = [];
+    acts.filter((a) => a.statut === "completee").forEach((a) => {
+      String(a.commentaire || "").split(/\n+/).map((l) => l.replace(/^[\s\-•*]+/, "").trim()).filter((l) => l.length > 3).forEach((l) => {
+        const k = l.toLowerCase();
+        if (!vus.has(k)) { vus.add(k); lignes.push(l); }
+      });
+    });
+    if (!lignes.length) acts.filter((a) => a.statut === "completee").forEach((a) => lignes.push(a.libelle));
+    return lignes;
+  }
+
+  function enteteBW(b, a, deps, etiquette) {
+    const c = compter(a, Object.keys(STATUTS_ACT));
+    const autres = c.non_demarree + c.reportee + c.annulee;
+    return entete(`${esc(b.code)} · ${etiquette}`, esc(deps.join(", ").toUpperCase())) +
+      `<div class="m-bw-tete"><div class="m-bw-code">${esc(codeBW(b))}</div><div>
+        <h3 class="m-bw-titre">${esc(titreCourt(b))}</h3>
+        <div class="m-bw-compte"><b class="o">${c.completee}</b> /${a.length} activités finalisées (${pct(c.completee, a.length)} %)
+          · <b>${c.en_cours}</b> en cours · <b>${autres}</b> ${autres > 1 ? "non démarrées" : "non démarrée"}</div></div></div>` +
+      barreM(segsAct(c), Math.max(a.length, 1), "m-bar m-bar-bw");
+  }
+
   function renderStats() {
     const d = S.data;
     const strats = stratsFiltrees();
@@ -255,95 +265,174 @@
     const outs = outputsFiltres();
     const ca = compter(acts, Object.keys(STATUTS_ACT));
     const co = compter(outs, Object.keys(STATUTS_OUT));
-    const renseignes = outs.length - co.non_renseigne;
-
-    $("#kpis").innerHTML = [
-      { l: "Activités", v: acts.length, s: strats.length + " stratégies", c: "var(--ciel)" },
-      { l: "Complétées", v: ca.completee, s: pct(ca.completee, acts.length) + " % des activités", c: "var(--st-ok)" },
-      { l: "En cours", v: ca.en_cours, s: pct(ca.en_cours, acts.length) + " %", c: "var(--st-wip)" },
-      { l: "Non démarrées", v: ca.non_demarree, s: pct(ca.non_demarree, acts.length) + " %" + (ca.reportee + ca.annulee ? " · " + (ca.reportee + ca.annulee) + " reportée(s)/annulée(s)" : ""), c: "var(--st-ko)" },
-      { l: "Outputs atteints", v: co.atteint + " / " + outs.length, s: co.partiel + " partiellement · " + co.en_cours + " en cours", c: "var(--c-out)" },
-      { l: "Taux d'atteinte", v: pct(co.atteint, renseignes) + " %", s: "hors " + co.non_renseigne + " non renseignés", c: "var(--c-act)" },
-    ].map((k) => `<div class="kpi" style="--kpi:${k.c}"><div class="kpi-label">${k.l}</div><div class="kpi-val">${k.v}</div><div class="kpi-sub">${esc(k.s)}</div></div>`).join("");
-
-    // Intro rédigée à partir des données
     const parBw = d.big_wins.map((b) => {
-      const sids = strats.filter((s) => s.big_win_id === b.id).map((s) => s.id);
-      const a = activitesDe(sids);
+      const st = strats.filter((s) => s.big_win_id === b.id);
+      const a = activitesDe(st.map((s) => s.id));
       const o = outs.filter((x) => x.big_win_id === b.id);
-      return { b, a, o, sids };
-    }).filter((x) => x.a.length || x.o.length || !S.dep);
-    const meilleurs = parBw.filter((x) => x.a.length).sort((p, q) => pct(compter(q.a, ["completee"]).completee, q.a.length) - pct(compter(p.a, ["completee"]).completee, p.a.length));
-    const top = meilleurs[0], bas = meilleurs[meilleurs.length - 1];
-    const zonesActives = d.zones.filter((z) => outs.some((o) => (d.zonesParOutput.get(o.id) || []).includes(z.id)));
-    $("#intro").innerHTML =
-      `Ce tableau présente <b>l'état de mise en œuvre des ${parBw.length} Big Wins et leviers stratégiques ${CFG.annee}</b>${S.dep ? " du département <b>" + esc(S.dep) + "</b>" : ""} au ${esc(CFG.pays)}. ` +
-      `Sur ${acts.length} activités planifiées, <b>${ca.completee} sont complétées (${pct(ca.completee, acts.length)} %)</b>, ${ca.en_cours} sont en cours et ${ca.non_demarree} n'ont pas démarré. ` +
-      `${co.atteint} des ${outs.length} outputs sont atteints, ${co.non_renseigne} restent à renseigner. ` +
-      (top && bas && top !== bas ? `${esc(titreBW(top.b))} est le plus avancé, ${esc(titreBW(bas.b))} le moins avancé. ` : "") +
-      (zonesActives.length ? `Les outputs sont mis en œuvre dans ${zonesActives.length} zones : ${zonesActives.map((z) => esc(z.nom)).join(", ")}.` : "");
+      const deps = [...new Set(st.flatMap((s) => s.departements || []))];
+      return { b, st, a, o, deps, c: compter(a, Object.keys(STATUTS_ACT)), co: compter(o, Object.keys(STATUTS_OUT)) };
+    }).filter((x) => x.a.length || x.o.length);
+    const filtre = S.dep ? ` · ${esc(S.dep).toUpperCase()}` : "";
+    let h = "";
 
-    // Lignes « planet »
-    let html = `<div class="planet-head"><div>Big Win<sup>1</sup></div><div></div>
-      <div><span class="c-act">Activités</span> et <span class="c-out">outputs</span><br><small>évolution<sup>2</sup></small></div>
-      <div>Zones d'intervention<br><small>état des outputs<sup>3</sup> : <span class="c-ok">atteint</span> / <span class="c-wip">en cours</span> / <span class="c-ko">non atteint</span></small></div></div>`;
-    parBw.forEach(({ b, a, o }, i) => {
-      const cA = compter(a, Object.keys(STATUTS_ACT));
-      const cO = compter(o, Object.keys(STATUTS_OUT));
-      const sA = serie("activite", a, "completee", b.id);
-      const sO = serie("output", o, "atteint", b.id);
+    // 1. Vue d'ensemble
+    h += `<section class="m-diapo" id="m-vue">${entete("Vue d’ensemble", "Toutes les Big Wins" + filtre)}
+      <h2 class="m-titre">${ca.completee} activités finalisées sur ${acts.length} · ${co.atteint} outputs atteints</h2>${legendeAct()}
+      <div class="table-wrap"><table class="m-table"><thead><tr><th>Big Win</th><th></th><th>Avancement</th><th>Finalisées</th><th>En cours</th><th>Non dém.</th><th>Outputs atteints</th></tr></thead><tbody>
+      ${parBw.map((x) => `<tr><td class="m-code">${esc(codeBW(x.b))}</td><td>${esc(titreCourt(x.b))}</td>
+        <td class="m-av">${barreM(segsAct(x.c), Math.max(x.a.length, 1))}</td><td class="m-n o">${x.c.completee}</td><td class="m-n">${x.c.en_cours}</td>
+        <td class="m-n">${x.c.non_demarree + x.c.reportee + x.c.annulee}</td><td class="m-n b">${x.co.atteint}<small>/${x.o.length}</small></td></tr>`).join("")}
+      <tr class="m-total"><td>Total</td><td></td><td></td><td class="m-n o">${ca.completee}</td><td class="m-n">${ca.en_cours}</td>
+        <td class="m-n">${ca.non_demarree + ca.reportee + ca.annulee}</td><td class="m-n b">${co.atteint}<small>/${outs.length}</small></td></tr>
+      </tbody></table></div></section>`;
+
+    // 2. Chiffres clés et graphiques
+    const deps = d.departements.filter((x) => !["ADMIN", "MEL", "LECTURE"].includes(x.code)).map((dep) => {
+      const a = activitesDe(strats.filter((s) => (s.departements || []).includes(dep.code)).map((s) => s.id));
+      return { dep, a, c: compter(a, Object.keys(STATUTS_ACT)) };
+    }).filter((x) => x.a.length).sort((p, q) => q.a.length - p.a.length);
+    const maxDep = Math.max(1, ...deps.map((x) => x.a.length));
+    const parts = [{ l: "Finalisées", n: ca.completee, c: M.orange }, { l: "En cours", n: ca.en_cours, c: M.ciel },
+      { l: "Non démarrées", n: ca.non_demarree + ca.reportee + ca.annulee, c: M.clair }];
+    let ang = 0;
+    const R = 70, r = 42, cx = 90, cy = 90;
+    const arc = (p) => {
+      const a0 = ang, a1 = ang + (p.n / Math.max(acts.length, 1)) * Math.PI * 2; ang = a1;
+      if (!p.n) return "";
+      if (p.n === acts.length) return `<circle cx="${cx}" cy="${cy}" r="${(R + r) / 2}" fill="none" stroke="${p.c}" stroke-width="${R - r}"/>`;
+      const pt = (rad, t) => [cx + rad * Math.sin(t), cy - rad * Math.cos(t)];
+      const [x1, y1] = pt(R, a0), [x2, y2] = pt(R, a1), [x3, y3] = pt(r, a1), [x4, y4] = pt(r, a0);
+      const g = a1 - a0 > Math.PI ? 1 : 0;
+      return `<path d="M${x1},${y1}A${R},${R} 0 ${g} 1 ${x2},${y2}L${x3},${y3}A${r},${r} 0 ${g} 0 ${x4},${y4}Z" fill="${p.c}"><title>${p.l} : ${p.n}</title></path>`;
+    };
+    h += `<section class="m-diapo" id="m-chiffres">${entete("Chiffres clés", "Toutes les Big Wins" + filtre)}
+      <div class="m-kpis">${[[parBw.length, "Big Wins et enablers"], [acts.length, "Activités planifiées"], [ca.completee, "Activités finalisées"], [co.atteint, "Outputs atteints"]]
+        .map(([v, l]) => `<div class="m-kpi"><b>${v}</b><span>${l}</span></div>`).join("")}</div>
+      <div class="m-graphes">
+        <div class="m-graphe"><h4>Taux de réalisation des activités (%) par Big Win</h4>
+          <div class="m-colonnes">${parBw.map((x) => {
+            const n = Math.max(x.a.length, 1);
+            return `<div class="m-col"><div class="m-col-pile">${segsAct(x.c).slice().reverse().map((s) => (s.n ? `<span style="height:${(100 * s.n) / n}%;background:${s.c}" title="${esc(s.lib)} : ${pct(s.n, n)} %"></span>` : "")).join("")}</div>
+              <b>${pct(x.c.completee, n)} %</b><small>${esc(codeBW(x.b))}</small></div>`;
+          }).join("")}</div>${legendeAct()}</div>
+        <div class="m-graphe"><h4>Répartition des activités par statut</h4>
+          <div class="m-donut"><svg viewBox="0 0 180 180" role="img" aria-label="${parts.map((p) => p.n + " " + p.l.toLowerCase()).join(", ")}">${parts.map(arc).join("")}
+            <text x="90" y="88" text-anchor="middle" font-size="26" font-weight="700" fill="${M.orange}">${pct(ca.completee, acts.length)} %</text>
+            <text x="90" y="106" text-anchor="middle" font-size="10" fill="${M.gris}">finalisées</text></svg>
+          <ul>${parts.map((p) => `<li><i style="background:${p.c}"></i>${p.l}<b>${p.n}</b><small>${pct(p.n, acts.length)} %</small></li>`).join("")}</ul></div></div>
+        <div class="m-graphe m-graphe-large"><h4>Nombre d'activités par département et statut</h4>
+          ${deps.map((x) => `<div class="m-hbar"><span>${esc(x.dep.libelle)}</span><div style="width:${(100 * x.a.length) / maxDep}%">${barreM(segsAct(x.c), x.a.length)}</div><b>${x.a.length}</b></div>`).join("")}
+          <p class="m-note">Une activité portée par plusieurs départements est comptée pour chacun.</p></div>
+      </div></section>`;
+
+    // 3. Zones d'intervention : carte du pays et cartes de zones
+    const pzAll = outputsParZone(outs);
+    const loc = outs.filter((o) => (d.zonesParOutput.get(o.id) || []).length);
+    h += `<section class="m-diapo" id="m-zones">${entete("Zones d’intervention", "Toutes les Big Wins" + filtre)}
+      <h2 class="m-titre">${loc.length} outputs localisés dans ${d.zones.length} zones</h2>
+      <div class="m-deux"><div class="m-carte">${carteSVG(couleursZonesM(outs), { grand: true, titre: "Zones d'intervention" })}${legendeCarte()}</div>
+      <div>${d.zones.map((z) => {
+        const l = pzAll.get(z.id) || [];
+        const c = compter(l, Object.keys(STATUTS_OUT));
+        const bws = parBw.filter((x) => l.some((o) => o.big_win_id === x.b.id))
+          .map((x) => `${esc(codeBW(x.b))} (${l.filter((o) => o.big_win_id === x.b.id && o.statut === "atteint").length}/${l.filter((o) => o.big_win_id === x.b.id).length})`);
+        return `<div class="m-zone"><div class="m-zone-tete"><div><b>${esc(z.nom)}</b> <small>${z.type === "LS" ? "Learning site" : z.type === "IS" ? "Implementation support" : esc(z.type)}</small></div>
+          <span class="m-gros">${c.atteint}/${l.length}</span></div>
+          <div class="m-sous">outputs atteints${l.length ? " · " + resumeOut(c) : ""}</div>${l.length ? barreM(segsOut(c), l.length) : ""}
+          <div class="m-petit"><b>Big Wins :</b> ${bws.join(" · ") || "aucun"}</div></div>`;
+      }).join("")}<p class="m-note">+ ${outs.length - loc.length} outputs transversaux (niveau pays ou organisation), non localisés</p></div></div></section>`;
+
+    h += `<section class="m-diapo" id="m-multiples">${entete("Zones d’intervention", "Toutes les Big Wins" + filtre)}
+      <h2 class="m-titre">Outputs atteints par Big Win et par zone</h2><div class="m-multiples">
+      ${parBw.map((x) => {
+        const zl = x.o.some((o) => (d.zonesParOutput.get(o.id) || []).length);
+        return `<a class="m-mini" href="#m-bw-${x.b.id}"><div class="m-mini-tete"><b>${esc(codeBW(x.b))}</b><span><b>${x.co.atteint}/${x.o.length}</b> outputs atteints</span></div>
+          <small>${esc(titreCourt(x.b))}</small><div class="m-mini-carte">${carteSVG(couleursZonesM(x.o), { titre: "Zones " + x.b.code, fs: 11 })}
+          ${zl ? "" : '<span class="m-transv">Outputs transversaux : aucune zone ciblée</span>'}</div></a>`;
+      }).join("")}<div class="m-mini m-mini-leg"><b>Lecture</b>${legendeCarte()}<small>Ziniaré et Manga : learning sites · Zorgho : implementation support</small></div></div></section>`;
+
+    // 4. Chaque Big Win : activités, outputs atteints, zones
+    parBw.forEach((x) => {
+      const { b, st, a, o, deps: dp } = x;
+      const fini = a.filter((t) => t.statut === "completee");
+      // activités finalisées par stratégie
+      h += `<section class="m-diapo" id="m-bw-${b.id}">${enteteBW(b, a, dp, "Activités finalisées")}
+        <h4 class="m-section">Activités finalisées · ${fini.length}</h4>
+        ${fini.length ? `<div class="m-strats">${st.map((s) => {
+          const as = a.filter((t) => t.strategy_id === s.id);
+          const nf = as.filter((t) => t.statut === "completee").length;
+          if (!nf) return "";
+          const lignes = bulletsStrategie(as);
+          return `<div class="m-strat"><div class="m-strat-tete"><b>${nf}</b><span>${esc(s.titre_court || court(s.libelle, 80))}</span></div>
+            <ul>${lignes.slice(0, 6).map((l) => `<li>${esc(court(l, 170))}</li>`).join("")}${lignes.length > 6 ? `<li class="m-plus">+ ${lignes.length - 6} autres</li>` : ""}</ul></div>`;
+        }).join("")}</div>` : '<p class="m-vide">Aucune activité finalisée à ce jour.</p>'}
+        ${["en_cours", "non_demarree"].map((k) => {
+          const l = a.filter((t) => (k === "en_cours" ? t.statut === "en_cours" : !["completee", "en_cours"].includes(t.statut)));
+          return l.length ? `<div class="m-reste"><h5>${k === "en_cours" ? "En cours" : "Non démarrées"} · ${l.length}</h5><ul>${l.map((t) => `<li>${esc(court(t.libelle, 150))}</li>`).join("")}</ul></div>` : "";
+        }).join("")}</section>`;
+
+      // outputs atteints
+      const at = o.filter((t) => t.statut === "atteint");
+      const autres = o.filter((t) => t.statut !== "atteint");
+      h += `<section class="m-diapo">${enteteBW(b, a, dp, "Outputs atteints")}
+        <h4 class="m-section">Outputs atteints <span class="m-section-n">${at.length}<small>/${o.length}</small></span></h4>
+        ${at.length ? `<div class="m-cartes">${at.map((t) => `<div class="m-carte-out"><div class="m-carte-tete"><span class="m-gros">${esc(t.valeur_cle || "Fait")}</span><span class="m-badge">Atteint</span></div>
+          <p>${esc(t.libelle_court || t.cible)}</p>${t.valeur_realisee ? `<small>${esc(court(t.valeur_realisee, 140))}</small>` : ""}</div>`).join("")}</div>` : '<p class="m-vide">Aucun output atteint à ce jour.</p>'}
+        ${autres.length ? `<div class="m-reste"><h5>Autres outputs · ${autres.length}</h5><ul class="m-autres">${autres.map((t) => `<li><span class="m-pastille" style="background:${OUT_M[t.statut]}"></span>
+          <span>${esc(t.libelle_court || t.cible)}${t.valeur_cle ? ` <b>${esc(t.valeur_cle)}</b>` : ""}</span><em>${STATUTS_OUT[t.statut]}</em></li>`).join("")}</ul></div>` : ""}</section>`;
+
+      // zones
       const pz = outputsParZone(o);
-      const couleurs = new Map();
-      pz.forEach((list, zid) => { const e = etatZone(list); couleurs.set(zid, { fill: ZONE_COUL[e], txt: ZONE_TXT[e] }); });
-      const transversaux = o.filter((x) => !(d.zonesParOutput.get(x.id) || []).length).length;
-      html += `<div class="planet-row">
-        <div class="leaf" style="--bw:${esc(b.couleur)}">${esc(b.code.replace(" (politiques)", ""))}<small>${b.code.includes("politiques") ? "politiques" : a.length + " act."}</small></div>
-        <div class="planet-text">
-          ${b.objectif_organisationnel ? `<div class="bw-org">${esc(b.objectif_organisationnel)}</div>` : ""}
-          <h3><b>${i + 1}. ${esc(titreBW(b))}</b> (${a.length} activités · ${o.length} outputs)</h3>
-          <p>${esc(nettoie(b.libelle))}</p>
-          <div class="bars">
-            <div class="bar-line"><span class="lbl">Activités</span>${a.length ? stackBar(cA, Object.keys(STATUTS_ACT), a.length) : '<span class="vide">aucune</span>'}<span class="pct" style="color:var(--c-act)">${pct(cA.completee, a.length)} %</span></div>
-            <div class="bar-line"><span class="lbl">Outputs</span>${o.length ? stackBar(cO, Object.keys(STATUTS_OUT), o.length) : '<span class="vide">aucun</span>'}<span class="pct" style="color:var(--c-out)">${pct(cO.atteint, o.length)} %</span></div>
-          </div>
-        </div>
-        <div class="evo">${a.length || o.length ? evolution(a.length ? sA : [{ t: Date.now() - 1, v: 0 }, { t: Date.now(), v: 0 }], o.length ? sO : [{ t: Date.now() - 1, v: 0 }, { t: Date.now(), v: 0 }]) : ""}</div>
-        <div class="mini-map">${carteSVG(couleurs, { titre: "Zones " + titreBW(b) })}
-          ${transversaux ? `<div class="evo-vide">+ ${transversaux} output(s) transversal(aux)</div>` : ""}</div>
-      </div>`;
+      const lignes = d.zones.map((z) => ({ nom: z.nom, type: z.type === "LS" ? "Learning site" : z.type === "IS" ? "Implementation support" : z.type, l: pz.get(z.id) || [] }));
+      lignes.push({ nom: "Transversal", type: "niveau pays / organisation", l: o.filter((t) => !(d.zonesParOutput.get(t.id) || []).length) });
+      const atZ = at.filter((t) => (d.zonesParOutput.get(t.id) || []).length);
+      h += `<section class="m-diapo">${enteteBW(b, a, dp, "Zones d’intervention")}
+        <div class="m-deux"><div class="m-carte">${carteSVG(couleursZonesM(o), { titre: "Zones " + b.code, fs: 9 })}
+          ${o.some((t) => (d.zonesParOutput.get(t.id) || []).length) ? "" : '<span class="m-transv">Outputs transversaux : aucune zone d’intervention ciblée</span>'}${legendeCarte()}</div>
+        <div><h4 class="m-section">Outputs par zone <span class="m-section-n">${o.length}</span></h4>
+          ${lignes.map((z) => {
+            const c = compter(z.l, Object.keys(STATUTS_OUT));
+            return `<div class="m-zl"><div><b>${esc(z.nom)}</b><small>${esc(z.type)}</small></div>
+              ${z.l.length ? `<span class="m-gros">${c.atteint}/${z.l.length}</span><div>${barreM(segsOut(c), z.l.length)}<small>${resumeOut(c)}</small></div>` : '<span class="m-vide">Aucun output</span>'}</div>`;
+          }).join("")}
+          <h5 class="m-sous-titre">Outputs atteints dans les zones</h5>
+          ${atZ.length ? `<ul class="m-liste">${atZ.map((t) => `<li>${esc(t.libelle_court || t.cible)} <small>${(d.zonesParOutput.get(t.id) || []).map((id) => esc(d.zoneById.get(id).nom)).join(", ")}</small></li>`).join("")}</ul>` : '<p class="m-vide">Aucun output localisé n’est encore atteint.</p>'}
+        </div></div></section>`;
     });
-    $("#planet").innerHTML = html;
 
-    // Récap par département
-    const deps = d.departements.filter((x) => !["ADMIN", "MEL"].includes(x.code));
-    let tot = { completee: 0, en_cours: 0, non_demarree: 0, autre: 0, n: 0 };
-    let rows = deps.map((dep) => {
-      const sids = d.strategies.filter((s) => (s.departements || []).includes(dep.code)).map((s) => s.id);
-      const a = activitesDe(sids);
-      if (!a.length) return "";
-      const c = compter(a, Object.keys(STATUTS_ACT));
-      return `<tr><td>${esc(dep.libelle)}</td><td>${c.completee}</td><td>${c.en_cours}</td><td>${c.non_demarree}</td><td>${a.length}</td>
-        <td style="width:30%">${stackBar(c, Object.keys(STATUTS_ACT), a.length)}</td><td><b>${pct(c.completee, a.length)} %</b></td></tr>`;
-    }).join("");
-    const all = d.activites;
-    const ct = compter(all, Object.keys(STATUTS_ACT));
-    tot = all.length;
-    $("#recap-dep").innerHTML = `<div class="table-wrap"><table class="recap"><thead><tr><th>Département</th><th>Complétées</th><th>En cours</th><th>Non dém.</th><th>Total</th><th></th><th>%</th></tr></thead>
-      <tbody>${rows}<tr class="total"><td>Total (activités uniques)</td><td>${ct.completee}</td><td>${ct.en_cours}</td><td>${ct.non_demarree}</td><td>${tot}</td><td>${stackBar(ct, Object.keys(STATUTS_ACT), tot)}</td><td>${pct(ct.completee, tot)} %</td></tr></tbody></table></div>
-      <p class="notes">Une activité portée par plusieurs départements (ex. « Program, PAC ») est comptée pour chacun.</p>`;
+    // 5. À retenir
+    const enCours = acts.filter((t) => t.statut === "en_cours");
+    const nonDem = acts.filter((t) => !["completee", "en_cours"].includes(t.statut));
+    const bwDe = (t) => codeBW(d.bwById.get(d.stratById.get(t.strategy_id).big_win_id));
+    const chiffres = outs.filter((t) => t.statut === "atteint" && t.valeur_cle && t.valeur_cle !== "Fait").slice(0, 6);
+    h += `<section class="m-diapo" id="m-retenir">${entete("À retenir", "Synthèse " + CFG.annee + filtre)}
+      <h2 class="m-titre">À retenir</h2><div class="m-retenir">
+      <div class="m-ret"><div class="m-ret-tete"><b style="color:${M.orange}">${ca.completee}</b><span>Acquis<small>activités finalisées sur ${acts.length}</small></span></div>
+        <ul><li>${pct(ca.completee, acts.length)} % des activités finalisées (${ca.completee} sur ${acts.length})</li><li>${co.atteint} outputs atteints sur ${outs.length}</li>
+        ${chiffres.map((t) => `<li><b>${esc(t.valeur_cle)}</b> : ${esc(t.libelle_court || t.cible)}</li>`).join("")}</ul></div>
+      <div class="m-ret"><div class="m-ret-tete"><b style="color:${M.ciel}">${enCours.length}</b><span>En cours<small>activités</small></span></div>
+        <ul>${enCours.map((t) => `<li><b>${esc(bwDe(t))}</b> : ${esc(court(t.libelle, 90))}</li>`).join("") || "<li>Aucune</li>"}</ul></div>
+      <div class="m-ret"><div class="m-ret-tete"><b style="color:${M.gris}">${nonDem.length}</b><span>Non démarrées<small>activités</small></span></div>
+        <ul>${nonDem.map((t) => `<li><b>${esc(bwDe(t))}</b> : ${esc(court(t.libelle, 90))}</li>`).join("") || "<li>Aucune</li>"}</ul></div>
+      </div></section>`;
+
+    $("#rapport").innerHTML = h;
+    $("#rap-nav").innerHTML = [["m-vue", "Vue d’ensemble"], ["m-chiffres", "Chiffres clés"], ["m-zones", "Zones"]]
+      .concat(parBw.map((x) => [`m-bw-${x.b.id}`, codeBW(x.b)])).concat([["m-retenir", "À retenir"]])
+      .map(([id, l]) => `<a href="#${id}">${esc(l)}</a>`).join("");
 
     // Historique
-    const h = d.historique.slice(0, 40);
-    $("#historique").innerHTML = h.length ? h.map((e) => {
+    const hist = d.historique.slice(0, 40);
+    $("#historique").innerHTML = hist.length ? hist.map((e) => {
       let quoi = "";
       if (e.objet === "activite") {
-        const a = d.activites.find((x) => x.id === e.objet_id);
-        quoi = "Activité « " + esc(court(a ? a.libelle : "#" + e.objet_id, 70)) + " »";
+        const t = d.activites.find((y) => y.id === e.objet_id);
+        quoi = "Activité « " + esc(court(t ? t.libelle : "#" + e.objet_id, 70)) + " »";
       } else if (e.objet === "output") {
-        const o = d.outputs.find((x) => x.id === e.objet_id);
-        quoi = "Output « " + esc(court(o ? o.cible : "#" + e.objet_id, 70)) + " »";
+        const t = d.outputs.find((y) => y.id === e.objet_id);
+        quoi = "Output « " + esc(court(t ? t.libelle_court || t.cible : "#" + e.objet_id, 70)) + " »";
       } else {
-        const ind = d.indicateurs.find((x) => x.id === e.objet_id);
+        const ind = d.indicateurs.find((y) => y.id === e.objet_id);
         quoi = "Indicateur « " + esc(ind ? ind.libelle : "#" + e.objet_id) + " » " + esc(e.champ);
       }
       const lib = (v) => esc(STATUTS_ACT[v] || STATUTS_OUT[v] || court(v, 60) || "vide");
@@ -610,6 +699,8 @@
     $("#out-statut").innerHTML = Object.entries(STATUTS_OUT).map(([k, v]) => `<option value="${k}"${k === o.statut ? " selected" : ""}>${v}</option>`).join("");
     $("#out-valeur").value = o.valeur_realisee || "";
     $("#out-comm").value = o.commentaire || "";
+    $("#out-cle").value = o.valeur_cle || "";
+    $("#out-court").value = o.libelle_court || "";
     const zs = S.data.zonesParOutput.get(o.id) || [];
     $("#out-zones").innerHTML = S.data.zones.map((z) => `<label><input type="checkbox" value="${z.id}"${zs.includes(z.id) ? " checked" : ""}> ${esc(z.nom)}</label>`).join("");
     $("#out-err").textContent = "";
@@ -725,6 +816,7 @@
           p_code: S.session.code, p_id: id, p_statut: $("#out-statut").value,
           p_valeur: $("#out-valeur").value, p_commentaire: $("#out-comm").value,
           p_zones: $$("#out-zones input:checked").map((c) => +c.value),
+          p_valeur_cle: $("#out-cle").value, p_libelle_court: $("#out-court").value,
         });
         fermerDialogues();
         await rafraichir();
@@ -753,7 +845,7 @@
     let tab = "stats";
     try { tab = localStorage.getItem("bigwin_tab") || "stats"; } catch (e) { /* ignoré */ }
     allerA(["stats", "activites", "outputs", "carte"].includes(tab) ? tab : "stats");
-    if (S.session) $("#planet").innerHTML = '<div class="chargement">Chargement des données…</div>';
+    if (S.session) $("#rapport").innerHTML = '<div class="chargement">Chargement des données…</div>';
     try {
       await chargerCarte();
     } catch (e) { /* la carte reste vide */ }

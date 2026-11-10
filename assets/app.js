@@ -24,8 +24,8 @@
     reportee: "var(--st-na)", annulee: "var(--st-off)",
     atteint: "var(--st-ok)", partiel: "var(--st-part)", non_atteint: "var(--st-ko)", non_renseigne: "var(--st-na)",
   };
-  const ZONE_COUL = { atteint: "#1e9e4f", en_cours: "#f0b429", non_atteint: "#e05263", non_renseigne: "#c9c2a4" };
-  const ZONE_TXT = { atteint: "#0b6b31", en_cours: "#a86a00", non_atteint: "#c21f3a", non_renseigne: "#6b6450" };
+  const ZONE_COUL = { atteint: "#0b2e59", en_cours: "#f28c28", non_atteint: "#6b7480", non_renseigne: "#b7c0cb" };
+  const ZONE_TXT = { atteint: "#0b2e59", en_cours: "#c25e0c", non_atteint: "#4a525c", non_renseigne: "#6b7480" };
 
   const S = {
     data: null,
@@ -258,7 +258,7 @@
     const renseignes = outs.length - co.non_renseigne;
 
     $("#kpis").innerHTML = [
-      { l: "Activités", v: acts.length, s: strats.length + " stratégies", c: "var(--vert)" },
+      { l: "Activités", v: acts.length, s: strats.length + " stratégies", c: "var(--ciel)" },
       { l: "Complétées", v: ca.completee, s: pct(ca.completee, acts.length) + " % des activités", c: "var(--st-ok)" },
       { l: "En cours", v: ca.en_cours, s: pct(ca.en_cours, acts.length) + " %", c: "var(--st-wip)" },
       { l: "Non démarrées", v: ca.non_demarree, s: pct(ca.non_demarree, acts.length) + " %" + (ca.reportee + ca.annulee ? " · " + (ca.reportee + ca.annulee) + " reportée(s)/annulée(s)" : ""), c: "var(--st-ko)" },
@@ -458,11 +458,11 @@
       v.forEach((x) => {
         let t = max > min ? (x.valeur - min) / (max - min) : 1;
         if (indic.sens === "baisse") t = 1 - t;
-        const fill = `color-mix(in srgb, #00843d ${Math.round(25 + 75 * t)}%, #f6e7a8)`;
-        couleurs.set(x.zone_id, { fill, txt: "#0b4f26", valeur: x.valeur + (indic.unite ? " " + indic.unite : "") });
+        const fill = `color-mix(in srgb, #0b2e59 ${Math.round(15 + 85 * t)}%, #5bc0eb)`;
+        couleurs.set(x.zone_id, { fill, txt: "#071f3d", valeur: x.valeur + (indic.unite ? " " + indic.unite : "") });
       });
       legende = nums.length
-        ? `<span><i style="background:color-mix(in srgb,#00843d 25%,#f6e7a8)"></i>${indic.sens === "baisse" ? "plus élevé" : "plus faible"}</span><span><i style="background:#00843d"></i>${indic.sens === "baisse" ? "plus faible" : "plus élevé"}</span><span>${esc(indic.libelle)} · ${esc(selPer.value)}</span>`
+        ? `<span><i style="background:color-mix(in srgb,#0b2e59 15%,#5bc0eb)"></i>${indic.sens === "baisse" ? "plus élevé" : "plus faible"}</span><span><i style="background:#0b2e59"></i>${indic.sens === "baisse" ? "plus faible" : "plus élevé"}</span><span>${esc(indic.libelle)} · ${esc(selPer.value)}</span>`
         : "<span>Aucune valeur saisie pour cet indicateur.</span>";
     } else {
       selPer.hidden = true;

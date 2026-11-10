@@ -13,9 +13,10 @@ import sys
 import openpyxl
 
 BW_COULEURS = {
-    "BW 1.1": "#00843d", "BW 1.2": "#2e9e5b", "BW 2": "#1f5fa8",
-    "BW 2 (politiques)": "#5b84c4", "BW 3": "#8a3ffc", "SE 1": "#c77700",
-    "SE 2": "#b0306a", "SE 3": "#5a6472",
+    # Palette : bleu foncé, bleu ciel, orange, gris
+    "BW 1.1": "#0b2e59", "BW 1.2": "#1d5a96", "BW 2": "#2b8cc4",
+    "BW 2 (politiques)": "#5bc0eb", "BW 3": "#f28c28", "SE 1": "#d9731a",
+    "SE 2": "#6b7480", "SE 3": "#3d4752",
 }
 
 DEPARTEMENTS = [
@@ -187,7 +188,7 @@ def lire(chemin):
             titre, lib, org = noms_complets(wb, a, lib)
             data["big_wins"].append({"code": a, "titre": titre, "libelle": lib, "objectif_organisationnel": org,
                                      "ordre": len(data["big_wins"]) + 1,
-                                     "couleur": BW_COULEURS.get(a, "#00843d")})
+                                     "couleur": BW_COULEURS.get(a, "#0b2e59")})
         if not bw_courant or not propre(ws.cell(r, 3).value):
             continue
         strat_ordre[bw_courant] = strat_ordre.get(bw_courant, 0) + 1

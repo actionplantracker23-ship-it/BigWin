@@ -421,11 +421,7 @@
           <tr class="m-total"><td>Total (sans double compte)</td><td class="m-dep-barre"><div class="m-dep-l"><div class="m-dep-zone">${barreM(segsAct(ca), Math.max(acts.length, 1))}</div><b>${acts.length}</b></div></td>
             <td class="m-n">${ca.completee}</td><td class="m-n">${ca.en_cours}</td><td class="m-n">${ca.non_demarree}</td><td class="m-n">${ca.reportee + ca.annulee}</td>
             <td class="m-n">${tauxBadge(ca.completee, acts.length)}</td><td></td></tr>
-          </tbody></table></div>${legendeAct()}
-          <p class="m-note">Données liées à la synthèse des activités : chaque mise à jour d'activité met ce tableau à jour.
-            Cliquez sur un département (ou sur un nombre) pour ouvrir ses activités dans « Synthèse des activités » et les mettre à jour.
-            Taux d'achèvement = activités finalisées / activités du département. Une activité menée en collaboration (ex. Program et PAC)
-            est comptée pour chaque département ; la ligne Total la compte une seule fois. Taux : vert ≥ 75 %, ambre 50 à 74 %, rouge &lt; 50 %.</p></div>
+          </tbody></table></div>${legendeAct()}</div>
       </div></section>`;
 
     // 4. Chaque Big Win : activités, outputs atteints, zones

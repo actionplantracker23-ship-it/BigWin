@@ -284,6 +284,18 @@
     return `<span class="m-taux" style="background:${c}">${t} %</span>`;
   }
 
+  // Chiffre clé d'un output : saisi à la main, sinon tiré de la valeur réalisée, sinon « Fait » s'il est atteint
+  function extraireChiffre(texte) {
+    const t = String(texte || "");
+    let m = t.match(/(\d[\d\s\u00a0]*(?:[.,]\d+)?)\s?%/);
+    if (m) return m[1].trim().replace(/\./, ",") + " %";
+    m = t.match(/(?:^|[^\w])(\d{1,3}(?:[\s\u00a0]\d{3})+|\d+(?:[.,]\d+)?)(?![\w])/);
+    return m ? m[1].trim() : "";
+  }
+  function chiffreCle(o) {
+    return o.valeur_cle || extraireChiffre(o.valeur_realisee) || (o.statut === "atteint" ? "Fait" : "");
+  }
+
   function bulletsStrategie(acts) {
     const vus = new Set(), lignes = [];
     acts.filter((a) => a.statut === "completee").forEach((a) => {
@@ -443,10 +455,10 @@
       const autres = o.filter((t) => t.statut !== "atteint");
       h += `<section class="m-diapo">${enteteBW(b, a, dp, "Outputs atteints")}
         <h4 class="m-section">Outputs atteints <span class="m-section-n">${at.length}<small>/${o.length}</small></span></h4>
-        ${at.length ? `<div class="m-cartes">${at.map((t) => `<div class="m-carte-out"><div class="m-carte-tete"><span class="m-gros">${esc(t.valeur_cle || "Fait")}</span><span class="m-badge m-badge-ok">Atteint</span></div>
+        ${at.length ? `<div class="m-cartes">${at.map((t) => `<div class="m-carte-out"><div class="m-carte-tete"><span class="m-gros">${esc(chiffreCle(t))}</span><span class="m-badge m-badge-ok">Atteint</span></div>
           <p>${esc(t.libelle_court || t.cible)}</p>${t.valeur_realisee ? `<small>${esc(court(t.valeur_realisee, 140))}</small>` : ""}</div>`).join("")}</div>` : '<p class="m-vide">Aucun output atteint à ce jour.</p>'}
         ${autres.length ? `<div class="m-reste"><h5>Autres outputs · ${autres.length}</h5><ul class="m-autres">${autres.map((t) => `<li><span class="m-pastille" style="background:${OUT_M[t.statut]}"></span>
-          <span>${esc(t.libelle_court || t.cible)}${t.valeur_cle ? ` <b>${esc(t.valeur_cle)}</b>` : ""}</span><em>${STATUTS_OUT[t.statut]}</em></li>`).join("")}</ul></div>` : ""}</section>`;
+          <span>${esc(t.libelle_court || t.cible)}${chiffreCle(t) ? ` <b>${esc(chiffreCle(t))}</b>` : ""}</span><em>${STATUTS_OUT[t.statut]}</em></li>`).join("")}</ul></div>` : ""}</section>`;
 
       // zones : carte uniquement pour le Big Win 1 (BW 1.1 et BW 1.2)
       if (!/^BW 1\./.test(b.code)) return;
@@ -472,12 +484,12 @@
     const enCours = acts.filter((t) => t.statut === "en_cours");
     const nonDem = acts.filter((t) => !["completee", "en_cours"].includes(t.statut));
     const bwDe = (t) => codeBW(d.bwById.get(d.stratById.get(t.strategy_id).big_win_id));
-    const chiffres = outs.filter((t) => t.statut === "atteint" && t.valeur_cle && t.valeur_cle !== "Fait").slice(0, 6);
+    const chiffres = outs.filter((t) => t.statut === "atteint" && chiffreCle(t) && chiffreCle(t) !== "Fait").slice(0, 6);
     h += `<section class="m-diapo" id="m-retenir">${entete("À retenir", "Synthèse " + CFG.annee + filtre)}
       <h2 class="m-titre">À retenir</h2><div class="m-retenir">
       <div class="m-ret"><div class="m-ret-tete"><b style="color:${M.vert}">${ca.completee}</b><span>Acquis<small>activités finalisées sur ${acts.length}</small></span></div>
         <ul><li>${pct(ca.completee, acts.length)} % des activités finalisées (${ca.completee} sur ${acts.length})</li><li>${co.atteint} outputs atteints sur ${outs.length}</li>
-        ${chiffres.map((t) => `<li><b>${esc(t.valeur_cle)}</b> : ${esc(t.libelle_court || t.cible)}</li>`).join("")}</ul></div>
+        ${chiffres.map((t) => `<li><b>${esc(chiffreCle(t))}</b> : ${esc(t.libelle_court || t.cible)}</li>`).join("")}</ul></div>
       <div class="m-ret"><div class="m-ret-tete"><b style="color:${M.ambre}">${enCours.length}</b><span>En cours<small>activités</small></span></div>
         <ul>${enCours.map((t) => `<li><b>${esc(bwDe(t))}</b> : ${esc(court(t.libelle, 90))}</li>`).join("") || "<li>Aucune</li>"}</ul></div>
       <div class="m-ret"><div class="m-ret-tete"><b style="color:${M.rouge}">${nonDem.length}</b><span>Non démarrées<small>activités</small></span></div>
@@ -788,6 +800,9 @@
     $("#out-valeur").value = o.valeur_realisee || "";
     $("#out-comm").value = o.commentaire || "";
     $("#out-cle").value = o.valeur_cle || "";
+    $("#out-cle").placeholder = "auto : " + (extraireChiffre(o.valeur_realisee) || (o.statut === "atteint" ? "Fait" : "vide"));
+    $("#form-output").dataset.valeurInitiale = o.valeur_realisee || "";
+    $("#form-output").dataset.cleInitiale = o.valeur_cle || "";
     $("#out-court").value = o.libelle_court || "";
     const zs = S.data.zonesParOutput.get(o.id) || [];
     $("#out-zones").innerHTML = S.data.zones.map((z) => `<label><input type="checkbox" value="${z.id}"${zs.includes(z.id) ? " checked" : ""}> ${esc(z.nom)}</label>`).join("");
@@ -920,7 +935,10 @@
           p_code: S.session.code, p_id: id, p_statut: $("#out-statut").value,
           p_valeur: $("#out-valeur").value, p_commentaire: $("#out-comm").value,
           p_zones: $$("#out-zones input:checked").map((c) => +c.value),
-          p_valeur_cle: $("#out-cle").value, p_libelle_court: $("#out-court").value,
+          // valeur réalisée modifiée sans toucher au chiffre clé : le chiffre clé repasse en automatique
+          p_valeur_cle: ($("#out-valeur").value !== e.target.dataset.valeurInitiale && $("#out-cle").value === e.target.dataset.cleInitiale)
+            ? "" : $("#out-cle").value,
+          p_libelle_court: $("#out-court").value,
         });
         fermerDialogues();
         await rafraichir();

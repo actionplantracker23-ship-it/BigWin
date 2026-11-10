@@ -465,3 +465,15 @@ table.m-table { width: 100%; border-collapse: collapse; min-width: 720px; }
 .m-lien:hover { color: #F7941D; text-decoration-color: #F7941D; }
 .m-maj { color: #F7941D; font-size: 13px; white-space: nowrap; }
 .m-dep { min-width: 760px; }
+
+.m-ret-sous { margin: 14px 0 4px; font-size: 14px; color: #6D6E71; }
+/* Tableau par département compact, à côté du nuage de mots */
+.m-dep { min-width: 0; }
+.m-dep th, .m-dep td { padding: 8px 5px; font-size: 13.5px; }
+.m-dep .m-dep-barre { width: 26%; }
+.m-dep .m-taux { min-width: 46px; font-size: 13px; padding: 2px 6px; }
+.m-dep .m-lien { padding: 2px 3px; }
+table.m-table.m-dep { min-width: 0; table-layout: auto; }
+@media (min-width: 901px) { .m-graphes { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.m-dep .m-dep-barre { width: 30%; }
+.m-dep th:nth-child(n+3), .m-dep td:nth-child(n+3) { width: 1%; white-space: nowrap; }

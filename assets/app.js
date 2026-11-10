@@ -310,12 +310,12 @@
 
   function enteteBW(b, a, deps, etiquette) {
     const c = compter(a, Object.keys(STATUTS_ACT));
-    const autres = c.non_demarree + c.reportee + c.annulee;
+    const nd = c.non_demarree, rp = c.reportee + c.annulee;
     return entete(`${esc(b.code)} · ${etiquette}`, esc(deps.join(", ").toUpperCase())) +
       `<div class="m-bw-tete"><div class="m-bw-code">${esc(codeBW(b))}</div><div>
         <h3 class="m-bw-titre">${esc(titreCourt(b))}</h3>
         <div class="m-bw-compte"><b class="o">${c.completee}</b> /${a.length} activités finalisées (${pct(c.completee, a.length)} %)
-          · <b>${c.en_cours}</b> en cours · <b>${autres}</b> ${autres > 1 ? "non démarrées" : "non démarrée"}</div></div></div>` +
+          · <b>${c.en_cours}</b> en cours · <b>${nd}</b> ${nd > 1 ? "non démarrées" : "non démarrée"}${rp ? ` · <b>${rp}</b> ${rp > 1 ? "reportées" : "reportée"}` : ""}</div></div></div>` +
       barreM(segsAct(c), Math.max(a.length, 1), "m-bar m-bar-bw");
   }
 
@@ -357,12 +357,12 @@
     // 1. Vue d'ensemble
     h += `<section class="m-diapo" id="m-vue">${entete("Vue d’ensemble", "Toutes les Big Wins" + filtre)}
       <h2 class="m-titre">${ca.completee} activités finalisées sur ${acts.length} · ${co.atteint} outputs atteints</h2>${legendeAct()}
-      <div class="table-wrap"><table class="m-table"><thead><tr><th>Big Win</th><th></th><th>Avancement</th><th>Finalisées</th><th>En cours</th><th>Non dém.</th><th>Outputs atteints</th></tr></thead><tbody>
+      <div class="table-wrap"><table class="m-table"><thead><tr><th>Big Win</th><th></th><th>Avancement</th><th>Finalisées</th><th>En cours</th><th>Non dém.</th><th>Reportées</th><th>Outputs atteints</th></tr></thead><tbody>
       ${parBw.map((x) => `<tr><td class="m-code">${esc(codeBW(x.b))}</td><td>${esc(titreCourt(x.b))}</td>
         <td class="m-av">${barreM(segsAct(x.c), Math.max(x.a.length, 1))}</td><td class="m-n o">${x.c.completee}</td><td class="m-n">${x.c.en_cours}</td>
-        <td class="m-n">${x.c.non_demarree + x.c.reportee + x.c.annulee}</td><td class="m-n b">${x.co.atteint}<small>/${x.o.length}</small></td></tr>`).join("")}
+        <td class="m-n">${x.c.non_demarree}</td><td class="m-n">${x.c.reportee + x.c.annulee}</td><td class="m-n b">${x.co.atteint}<small>/${x.o.length}</small></td></tr>`).join("")}
       <tr class="m-total"><td>Total</td><td></td><td></td><td class="m-n o">${ca.completee}</td><td class="m-n">${ca.en_cours}</td>
-        <td class="m-n">${ca.non_demarree + ca.reportee + ca.annulee}</td><td class="m-n b">${co.atteint}<small>/${outs.length}</small></td></tr>
+        <td class="m-n">${ca.non_demarree}</td><td class="m-n">${ca.reportee + ca.annulee}</td><td class="m-n b">${co.atteint}<small>/${outs.length}</small></td></tr>
       </tbody></table></div></section>`;
 
     // 2. Chiffres clés et graphiques
@@ -376,7 +376,7 @@
     }).filter((x) => x.a.length).sort((p, q) => q.a.length - p.a.length);
     const maxDep = Math.max(1, ...deps.map((x) => x.a.length));
     const parts = [{ l: "Finalisées", n: ca.completee, c: M.vert }, { l: "En cours", n: ca.en_cours, c: M.ambre },
-      { l: "Non démarrées", n: ca.non_demarree, c: M.rouge }, { l: "Reportées / annulées", n: ca.reportee + ca.annulee, c: M.grisStatut }].filter((p) => p.n || p.l !== "Reportées / annulées");
+      { l: "Non démarrées", n: ca.non_demarree, c: M.rouge }, { l: "Reportées", n: ca.reportee + ca.annulee, c: M.grisStatut }];
     let ang = 0;
     const R = 70, r = 42, cx = 90, cy = 90;
     const arc = (p) => {
@@ -403,29 +403,29 @@
             <text x="90" y="88" text-anchor="middle" font-size="26" font-weight="700" fill="${M.vert}">${pct(ca.completee, acts.length)} %</text>
             <text x="90" y="106" text-anchor="middle" font-size="10" fill="${M.gris}">finalisées</text></svg>
           <ul>${parts.map((p) => `<li><i style="background:${p.c}"></i>${p.l}<b>${p.n}</b><small>${pct(p.n, acts.length)} %</small></li>`).join("")}</ul></div></div>
-        <div class="m-graphe m-graphe-large"><h4>Activités Big Win à mettre en œuvre</h4>${nuageMots(acts)}</div>
-        <div class="m-graphe m-graphe-large"><h4>Activités par département : nombre, statut et taux d'achèvement</h4>
+        <div class="m-graphe"><h4>Activités Big Win à mettre en œuvre</h4>${nuageMots(acts)}</div>
+        <div class="m-graphe"><h4>Activités par département : nombre, statut et taux d'achèvement</h4>
           <div class="table-wrap"><table class="m-table m-dep"><thead><tr>
-            <th>Département</th><th>Activités par statut</th><th>Finalisées</th><th>En cours</th><th>Non démarrées</th><th>Taux d'achèvement</th><th></th></tr></thead><tbody>
+            <th>Département</th><th>Activités</th><th>Fin.</th><th>En cours</th><th>Non dém.</th><th>Report.</th><th>Achèv.</th><th></th></tr></thead><tbody>
           ${deps.map((x) => {
-            const nd = x.c.non_demarree + x.c.reportee + x.c.annulee;
+            const nd = x.c.non_demarree, rp = x.c.reportee + x.c.annulee;
             const lien = (statut, n) => `<button type="button" class="m-lien" data-voir-dep="${esc(x.dep.code)}" data-voir-statut="${statut}"
               title="Voir ces activités dans la synthèse des activités">${n}</button>`;
             return `<tr class="m-dep-ligne" data-voir-dep="${esc(x.dep.code)}" data-voir-statut="" title="Voir et mettre à jour les activités de ce département">
               <td><b class="m-dep-nom">${esc(x.dep.libelle)}</b></td>
               <td class="m-dep-barre"><div class="m-dep-l"><div class="m-dep-zone"><div style="width:${(100 * x.a.length) / maxDep}%">${x.a.length ? barreM(segsAct(x.c), x.a.length) : ""}</div></div><b>${x.a.length}</b></div></td>
-              <td class="m-n">${lien("completee", x.c.completee)}</td><td class="m-n">${lien("en_cours", x.c.en_cours)}</td><td class="m-n">${lien("non_demarree", nd)}</td>
+              <td class="m-n">${lien("completee", x.c.completee)}</td><td class="m-n">${lien("en_cours", x.c.en_cours)}</td><td class="m-n">${lien("non_demarree", nd)}</td><td class="m-n">${lien("reportee", rp)}</td>
               <td class="m-n">${tauxBadge(x.c.completee, x.a.length)}</td>
-              <td class="m-n"><span class="m-maj">Mettre à jour →</span></td></tr>`;
+              <td class="m-n"><span class="m-maj" aria-hidden="true">→</span></td></tr>`;
           }).join("")}
           <tr class="m-total"><td>Total (sans double compte)</td><td class="m-dep-barre"><div class="m-dep-l"><div class="m-dep-zone">${barreM(segsAct(ca), Math.max(acts.length, 1))}</div><b>${acts.length}</b></div></td>
-            <td class="m-n">${ca.completee}</td><td class="m-n">${ca.en_cours}</td><td class="m-n">${ca.non_demarree + ca.reportee + ca.annulee}</td>
+            <td class="m-n">${ca.completee}</td><td class="m-n">${ca.en_cours}</td><td class="m-n">${ca.non_demarree}</td><td class="m-n">${ca.reportee + ca.annulee}</td>
             <td class="m-n">${tauxBadge(ca.completee, acts.length)}</td><td></td></tr>
           </tbody></table></div>${legendeAct()}
           <p class="m-note">Données liées à la synthèse des activités : chaque mise à jour d'activité met ce tableau à jour.
             Cliquez sur un département (ou sur un nombre) pour ouvrir ses activités dans « Synthèse des activités » et les mettre à jour.
-            Taux d'achèvement = activités finalisées / activités du département ; une activité portée par plusieurs départements est comptée pour chacun,
-            la ligne Total la compte une seule fois. Couleur du taux : vert ≥ 75 %, ambre 50 à 74 %, rouge &lt; 50 %.</p></div>
+            Taux d'achèvement = activités finalisées / activités du département. Une activité menée en collaboration (ex. Program et PAC)
+            est comptée pour chaque département ; la ligne Total la compte une seule fois. Taux : vert ≥ 75 %, ambre 50 à 74 %, rouge &lt; 50 %.</p></div>
       </div></section>`;
 
     // 4. Chaque Big Win : activités, outputs atteints, zones
@@ -443,9 +443,9 @@
           return `<div class="m-strat"><div class="m-strat-tete"><b>${nf}</b><span>${esc(s.titre_court || court(s.libelle, 80))}</span></div>
             <ul>${lignes.slice(0, 6).map((l) => `<li>${esc(court(l, 170))}</li>`).join("")}${lignes.length > 6 ? `<li class="m-plus">+ ${lignes.length - 6} autres</li>` : ""}</ul></div>`;
         }).join("")}</div>` : '<p class="m-vide">Aucune activité finalisée à ce jour.</p>'}
-        ${["en_cours", "non_demarree"].map((k) => {
-          const l = a.filter((t) => (k === "en_cours" ? t.statut === "en_cours" : !["completee", "en_cours"].includes(t.statut)));
-          return l.length ? `<div class="m-reste"><h5>${k === "en_cours" ? "En cours" : "Non démarrées"} · ${l.length}</h5><ul>${l.map((t) => `<li>${esc(court(t.libelle, 150))}</li>`).join("")}</ul></div>` : "";
+        ${[["en_cours", "En cours"], ["non_demarree", "Non démarrées"], ["reportee", "Reportées / annulées"]].map(([k, titre]) => {
+          const l = a.filter((t) => (k === "reportee" ? ["reportee", "annulee"].includes(t.statut) : t.statut === k));
+          return l.length ? `<div class="m-reste"><h5>${titre} · ${l.length}</h5><ul>${l.map((t) => `<li>${esc(court(t.libelle, 150))}</li>`).join("")}</ul></div>` : "";
         }).join("")}</section>`;
 
       // outputs atteints
@@ -480,7 +480,8 @@
 
     // 5. À retenir
     const enCours = acts.filter((t) => t.statut === "en_cours");
-    const nonDem = acts.filter((t) => !["completee", "en_cours"].includes(t.statut));
+    const nonDem = acts.filter((t) => t.statut === "non_demarree");
+    const reportees = acts.filter((t) => ["reportee", "annulee"].includes(t.statut));
     const bwDe = (t) => codeBW(d.bwById.get(d.stratById.get(t.strategy_id).big_win_id));
     const chiffres = outs.filter((t) => t.statut === "atteint" && chiffreCle(t) && chiffreCle(t) !== "Fait").slice(0, 6);
     h += `<section class="m-diapo" id="m-retenir">${entete("À retenir", "Synthèse " + CFG.annee + filtre)}
@@ -491,7 +492,8 @@
       <div class="m-ret"><div class="m-ret-tete"><b style="color:${M.ambre}">${enCours.length}</b><span>En cours<small>activités</small></span></div>
         <ul>${enCours.map((t) => `<li><b>${esc(bwDe(t))}</b> : ${esc(court(t.libelle, 90))}</li>`).join("") || "<li>Aucune</li>"}</ul></div>
       <div class="m-ret"><div class="m-ret-tete"><b style="color:${M.rouge}">${nonDem.length}</b><span>Non démarrées<small>activités</small></span></div>
-        <ul>${nonDem.map((t) => `<li><b>${esc(bwDe(t))}</b> : ${esc(court(t.libelle, 90))}</li>`).join("") || "<li>Aucune</li>"}</ul></div>
+        <ul>${nonDem.map((t) => `<li><b>${esc(bwDe(t))}</b> : ${esc(court(t.libelle, 90))}</li>`).join("") || "<li>Aucune</li>"}</ul>
+        ${reportees.length ? `<h5 class="m-ret-sous">Reportées / annulées · ${reportees.length}</h5><ul>${reportees.map((t) => `<li><b>${esc(bwDe(t))}</b> : ${esc(court(t.libelle, 90))}</li>`).join("")}</ul>` : ""}</div>
       </div></section>`;
 
     $("#rapport").innerHTML = h;

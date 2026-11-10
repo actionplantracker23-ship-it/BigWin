@@ -12,6 +12,9 @@ import sys
 
 import openpyxl
 
+# Big Wins du fichier Excel à ne pas importer (supprimés du tableau de bord à la demande)
+BIG_WINS_EXCLUS = {"BW 2 (politiques)"}
+
 BW_COULEURS = {
     # Palette : bleu foncé, bleu ciel, orange, gris
     "BW 1.1": "#0b2e59", "BW 1.2": "#1d5a96", "BW 2": "#2b8cc4",
@@ -182,6 +185,9 @@ def lire(chemin):
         a = propre(ws.cell(r, 1).value)
         if a == "Total":
             break
+        if a in BIG_WINS_EXCLUS:
+            bw_courant = None  # lignes ignorées jusqu'au Big Win suivant
+            continue
         if a:
             bw_courant = a
             lib = re.sub(r"\s+", " ", propre(ws.cell(r, 2).value) or a)

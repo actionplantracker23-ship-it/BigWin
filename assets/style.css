@@ -431,3 +431,14 @@ table.m-table { width: 100%; border-collapse: collapse; min-width: 720px; }
   .rap-nav { top: 60px; flex-wrap: nowrap; overflow-x: auto; }
   .rap-nav a { flex: none; }
 }
+
+/* Tableau par département (Chiffres clés) */
+.m-dep { min-width: 980px; }
+.m-dep th { white-space: normal; line-height: 1.2; vertical-align: bottom; }
+.m-dep td { font-size: 14.5px; padding: 9px 8px; }
+.m-dep-barre { width: 17%; }
+.m-dep-barre .m-bar { height: 14px; }
+.m-dep-l { display: flex; align-items: center; gap: 8px; }
+.m-dep-zone { flex: 1; min-width: 0; }
+.m-dep-l > b { flex: none; min-width: 26px; text-align: right; color: #004D84; }
+.m-taux { display: inline-block; min-width: 54px; text-align: center; color: #fff; font-weight: 700; font-size: 14px; padding: 3px 8px; border-radius: 3px; }

@@ -267,6 +267,14 @@
     }).join("")}</div>`;
   }
 
+  // Taux d'achèvement coloré : vert ≥ 75 %, ambre ≥ 50 %, rouge sinon
+  function tauxBadge(n, total) {
+    if (!total) return '<span class="m-vide">–</span>';
+    const t = pct(n, total);
+    const c = t >= 75 ? M.vert : t >= 50 ? M.ambre : M.rouge;
+    return `<span class="m-taux" style="background:${c}">${t} %</span>`;
+  }
+
   function bulletsStrategie(acts) {
     const vus = new Set(), lignes = [];
     acts.filter((a) => a.statut === "completee").forEach((a) => {
@@ -320,9 +328,13 @@
 
     // 2. Chiffres clés et graphiques
     const deps = d.departements.filter((x) => !["ADMIN", "MEL", "LECTURE"].includes(x.code)).map((dep) => {
-      const a = activitesDe(strats.filter((s) => (s.departements || []).includes(dep.code)).map((s) => s.id));
-      return { dep, a, c: compter(a, Object.keys(STATUTS_ACT)) };
-    }).filter((x) => x.a.length).sort((p, q) => q.a.length - p.a.length);
+      const st = strats.filter((s) => (s.departements || []).includes(dep.code));
+      const ids = new Set(st.map((s) => s.id)), bws = new Set(st.map((s) => s.big_win_id));
+      const a = activitesDe([...ids]);
+      // outputs du département : ceux de ses stratégies (ou de ses Big Wins quand l'output n'a pas de stratégie)
+      const o = outs.filter((t) => (t.strategy_id ? ids.has(t.strategy_id) : bws.has(t.big_win_id)));
+      return { dep, a, o, c: compter(a, Object.keys(STATUTS_ACT)), co: compter(o, Object.keys(STATUTS_OUT)) };
+    }).filter((x) => x.a.length || x.o.length).sort((p, q) => q.a.length - p.a.length);
     const maxDep = Math.max(1, ...deps.map((x) => x.a.length));
     const parts = [{ l: "Finalisées", n: ca.completee, c: M.vert }, { l: "En cours", n: ca.en_cours, c: M.ambre },
       { l: "Non démarrées", n: ca.non_demarree, c: M.rouge }, { l: "Reportées / annulées", n: ca.reportee + ca.annulee, c: M.grisStatut }].filter((p) => p.n || p.l !== "Reportées / annulées");
@@ -352,10 +364,31 @@
             <text x="90" y="88" text-anchor="middle" font-size="26" font-weight="700" fill="${M.vert}">${pct(ca.completee, acts.length)} %</text>
             <text x="90" y="106" text-anchor="middle" font-size="10" fill="${M.gris}">finalisées</text></svg>
           <ul>${parts.map((p) => `<li><i style="background:${p.c}"></i>${p.l}<b>${p.n}</b><small>${pct(p.n, acts.length)} %</small></li>`).join("")}</ul></div></div>
-        <div class="m-graphe"><h4>Activités Big Win à mettre en œuvre</h4>${nuageMots(acts)}</div>
-        <div class="m-graphe"><h4>Nombre d'activités par département et statut</h4>
-          ${deps.map((x) => `<div class="m-hbar"><span>${esc(x.dep.libelle)}</span><div style="width:${(100 * x.a.length) / maxDep}%">${barreM(segsAct(x.c), x.a.length)}</div><b>${x.a.length}</b></div>`).join("")}
-          <p class="m-note">Une activité portée par plusieurs départements est comptée pour chacun.</p></div>
+        <div class="m-graphe m-graphe-large"><h4>Activités Big Win à mettre en œuvre</h4>${nuageMots(acts)}</div>
+        <div class="m-graphe m-graphe-large"><h4>Activités et outputs par département : nombre, statut et taux d'achèvement</h4>
+          <div class="table-wrap"><table class="m-table m-dep"><thead><tr>
+            <th>Département</th><th>Activités par statut</th><th>Fin.</th><th>En cours</th><th>Non dém.</th><th>Achèvement activités</th>
+            <th>Outputs par statut</th><th>Atteints</th><th>Achèvement outputs</th></tr></thead><tbody>
+          ${deps.map((x) => {
+            const nd = x.c.non_demarree + x.c.reportee + x.c.annulee;
+            return `<tr><td>${esc(x.dep.libelle)}</td>
+              <td class="m-dep-barre"><div class="m-dep-l"><div class="m-dep-zone"><div style="width:${(100 * x.a.length) / maxDep}%">${x.a.length ? barreM(segsAct(x.c), x.a.length) : ""}</div></div><b>${x.a.length}</b></div></td>
+              <td class="m-n">${x.c.completee}</td><td class="m-n">${x.c.en_cours}</td><td class="m-n">${nd}</td>
+              <td class="m-n">${tauxBadge(x.c.completee, x.a.length)}</td>
+              <td class="m-dep-barre">${x.o.length ? barreM(segsOut(x.co), x.o.length) : '<span class="m-vide">aucun</span>'}</td>
+              <td class="m-n">${x.co.atteint}<small>/${x.o.length}</small></td>
+              <td class="m-n">${tauxBadge(x.co.atteint, x.o.length)}</td></tr>`;
+          }).join("")}
+          <tr class="m-total"><td>Total (sans double compte)</td><td class="m-dep-barre"><div class="m-dep-l"><div class="m-dep-zone">${barreM(segsAct(ca), Math.max(acts.length, 1))}</div><b>${acts.length}</b></div></td>
+            <td class="m-n">${ca.completee}</td><td class="m-n">${ca.en_cours}</td><td class="m-n">${ca.non_demarree + ca.reportee + ca.annulee}</td>
+            <td class="m-n">${tauxBadge(ca.completee, acts.length)}</td><td class="m-dep-barre">${barreM(segsOut(co), Math.max(outs.length, 1))}</td>
+            <td class="m-n">${co.atteint}<small>/${outs.length}</small></td><td class="m-n">${tauxBadge(co.atteint, outs.length)}</td></tr>
+          </tbody></table></div>
+          <div class="m-legende"><b style="color:#004D84">Outputs :</b>${[["Atteint", M.vert], ["Partiel", M.ambreClair], ["En cours", M.ambre], ["Non atteint", M.rouge], ["Non renseigné", M.grisStatut]]
+            .map(([l, c]) => `<span><i style="background:${c}"></i>${l}</span>`).join("")}</div>
+          <p class="m-note">Taux d'achèvement = activités finalisées / activités du département ; outputs atteints / outputs du département.
+            Une activité ou un output porté par plusieurs départements est compté pour chacun ; la ligne Total les compte une seule fois.
+            Couleur du taux : vert ≥ 75 %, ambre 50 à 74 %, rouge &lt; 50 %.</p></div>
       </div></section>`;
 
     // 4. Chaque Big Win : activités, outputs atteints, zones

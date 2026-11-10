@@ -79,6 +79,11 @@
   }
   const rpc = (fn, args) => api("/rpc/" + fn, { method: "POST", body: JSON.stringify(args) });
 
+  // Empreinte légère : change dès qu'une activité, un output ou un indicateur est mis à jour (par n'importe qui)
+  async function lireEmpreinte() {
+    try { return await rpc("etat_donnees", { p_code: S.session.code }); } catch (e) { return null; }
+  }
+
   async function charger() {
     $("#erreur").hidden = true;
     const r = await rpc("charger_donnees", { p_code: S.session.code });
@@ -94,6 +99,8 @@
       d.zonesParOutput.get(oz.output_id).push(oz.zone_id);
     });
     S.data = d;
+    S.chargeA = new Date();
+    S.empreinte = await lireEmpreinte();
   }
 
   async function chargerCarte() {
@@ -680,6 +687,9 @@
       b.className = "bandeau";
       b.innerHTML = `Connecté pour <b>${nom}</b> : ${estAdmin() ? "vous pouvez mettre à jour toutes les activités et tous les outputs." : "vous pouvez mettre à jour les activités de votre structure."}`;
     }
+    if (S.chargeA) {
+      b.innerHTML += ` <span class="bandeau-maj" title="Le tableau de bord se met à jour automatiquement dès qu'une activité ou un output est modifié.">· Données à jour à ${S.chargeA.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>`;
+    }
     $("#btn-nouvelle").hidden = lectureSeule();
   }
 
@@ -735,9 +745,14 @@
       if (champs.statut && champs.statut !== ancien) {
         S.data.historique.unshift({ objet: "activite", objet_id: id, big_win_id: S.data.stratById.get(a.strategy_id).big_win_id, champ: "statut", ancien, nouveau: r.statut, auteur: r.updated_by, created_at: r.updated_at });
       }
-      toast(champs.statut ? "Statut enregistré" : "Commentaire enregistré");
+      toast(champs.statut ? "Statut enregistré · tableau de bord mis à jour" : "Commentaire enregistré · tableau de bord mis à jour");
+      S.chargeA = new Date();
+      renderBandeau();
       renderStats();
+      renderOutputs();
+      renderCarte();
       if (champs.statut) renderActivites();
+      S.empreinte = await lireEmpreinte();
     } catch (e) {
       toast(e.message, true);
       renderActivites();
@@ -928,6 +943,27 @@
     });
   }
 
+  // Pas de rechargement pendant une saisie (commentaire en cours, fenêtre ouverte)
+  function saisieEnCours() {
+    const el = document.activeElement;
+    return !!$("dialog[open]") || (el && /^(TEXTAREA|INPUT|SELECT)$/.test(el.tagName) && el.closest(".tab-panel"));
+  }
+
+  async function verifierMaj() {
+    if (!S.session || !S.data || document.hidden || S.verifEnCours) return;
+    S.verifEnCours = true;
+    try {
+      const e = await lireEmpreinte();
+      if (e && S.empreinte && e !== S.empreinte) {
+        if (saisieEnCours()) { S.majEnAttente = true; return; }
+        S.majEnAttente = false;
+        await rafraichir("Tableau de bord mis à jour avec les dernières modifications");
+      }
+    } finally {
+      S.verifEnCours = false;
+    }
+  }
+
   async function demarrer() {
     $$("[data-annee]").forEach((e) => (e.textContent = CFG.annee));
     brancher();
@@ -939,6 +975,11 @@
       await chargerCarte();
     } catch (e) { /* la carte reste vide */ }
     await rafraichir();
+    setInterval(verifierMaj, 30000);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) verifierMaj(); });
+    window.addEventListener("focus", verifierMaj);
+    // une mise à jour mise en attente pendant une saisie est appliquée dès la fin de la saisie
+    document.addEventListener("focusout", () => setTimeout(() => { if (S.majEnAttente && !saisieEnCours()) verifierMaj(); }, 300));
   }
 
   demarrer();

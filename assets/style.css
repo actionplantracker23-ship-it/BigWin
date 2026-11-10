@@ -453,3 +453,5 @@ table.m-table { width: 100%; border-collapse: collapse; min-width: 720px; }
 .rap-sous button { font-family: Georgia, serif; font-size: 15px; color: #6D6E71; background: none; border: 0;
   border-bottom: 3px solid transparent; margin-bottom: -2px; padding: 8px 16px; cursor: pointer; white-space: nowrap; }
 .rap-sous button.actif { color: #004D84; border-bottom-color: #F7941D; font-weight: 700; }
+
+.bandeau-maj { color: var(--muted); font-size: 14px; white-space: nowrap; }

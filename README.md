@@ -27,6 +27,7 @@ Le filtre « Tous les départements » restreint toutes les vues à un départem
   qui vérifient aussi le code. Les codes sont stockés hachés (bcrypt) dans `codes_acces`.
 - Un département ne modifie que ses stratégies ; `ADMIN` et `MEL` modifient tout ;
   `LECTURE` (consultation) voit tout mais ne modifie rien.
+- **Mise à jour automatique** : dès qu’une activité ou un output est modifié (par vous ou par un autre département), le tableau de bord et les résultats se recalculent ; la page vérifie toutes les 30 secondes et à chaque retour sur l’onglet (fonction `etat_donnees`), sans interrompre une saisie en cours.
 - Chaque changement de statut est tracé dans `historique` (sert aussi aux courbes d'évolution).
 - Changer un code : `select definir_code_acces('<code ADMIN>', 'PAC', '<nouveau code>');`
 

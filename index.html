@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Big Wins 2026 · Suivi</title>
+  <meta name="description" content="Suivi de la mise en œuvre des Big Wins 2026 au Burkina Faso : activités, outputs et zones d'intervention.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%2300843d'/%3E%3Cpath d='M9 17l5 5 9-11' stroke='white' stroke-width='3.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+</head>
+<body class="verrouille">
+  <section class="ecran-login" id="ecran-login" aria-labelledby="titre-login">
+    <form class="login-carte" id="form-login" autocomplete="off">
+      <span class="logo logo-grand" aria-hidden="true">BW</span>
+      <h1 id="titre-login">Big Wins <span data-annee>2026</span></h1>
+      <p class="muted">Suivi de la mise en œuvre · accès réservé. Saisissez le code d'accès de votre département.</p>
+      <label for="login-code">Code d'accès</label>
+      <input type="password" id="login-code" required autofocus>
+      <p class="form-err" id="login-err" role="alert"></p>
+      <button type="submit" class="btn btn-green">Se connecter</button>
+    </form>
+  </section>
+
+  <header class="topbar">
+    <div class="topbar-in">
+      <span class="logo" aria-hidden="true">BW</span>
+      <h1 class="topbar-title">Tableau de bord <span class="muted-on-green">· Big Wins <span data-annee>2026</span></span></h1>
+      <button class="icon-btn" id="btn-refresh" title="Actualiser" aria-label="Actualiser">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="toolbar">
+      <nav class="tabs" role="tablist">
+        <button role="tab" data-tab="stats" class="tab active">Statistiques</button>
+        <button role="tab" data-tab="activites" class="tab">Synthèse des activités</button>
+        <button role="tab" data-tab="outputs" class="tab">Outputs</button>
+        <button role="tab" data-tab="carte" class="tab">Carte &amp; indicateurs</button>
+      </nav>
+      <div class="toolbar-right">
+        <select id="filtre-dep" aria-label="Filtrer par département">
+          <option value="">Tous les départements</option>
+        </select>
+        <button class="btn btn-outline" id="btn-login">Se déconnecter</button>
+      </div>
+    </div>
+
+    <div id="bandeau" class="bandeau"></div>
+    <div id="erreur" class="alerte" hidden></div>
+
+    <!-- STATISTIQUES -->
+    <section id="tab-stats" class="tab-panel">
+      <div class="kpis" id="kpis"></div>
+
+      <article class="planet">
+        <h2 class="planet-title">État de mise en œuvre des Big Wins</h2>
+        <p class="planet-intro" id="intro"></p>
+        <div class="planet-table" id="planet"></div>
+        <p class="notes">
+          <sup>1</sup> Nombre d'activités et d'outputs du plan 2026, feuille « Synthèse par Big Win ».
+          <sup>2</sup> Part des activités complétées (<span class="c-act">bleu</span>) et des outputs atteints
+          (<span class="c-out">bordeaux</span>) à chaque mise à jour enregistrée.
+          <sup>3</sup> Zones d'intervention des outputs, colorées selon leur état : <b class="c-ok">atteint</b>,
+          <b class="c-wip">en cours / partiel</b>, <b class="c-ko">non atteint</b>.
+        </p>
+      </article>
+
+      <div class="grid-2">
+        <article class="card">
+          <h3 class="card-title">Récapitulatif par département responsable</h3>
+          <div id="recap-dep"></div>
+        </article>
+        <article class="card">
+          <h3 class="card-title">Dernières mises à jour</h3>
+          <ul class="historique" id="historique"></ul>
+        </article>
+      </div>
+    </section>
+
+    <!-- ACTIVITES -->
+    <section id="tab-activites" class="tab-panel" hidden>
+      <article class="card card-flush">
+        <div class="card-head">
+          <h2>Plan des Big Wins <span data-annee>2026</span></h2>
+          <p>État détaillé de la mise en œuvre, par Big Win, par stratégie et par activité</p>
+        </div>
+        <div class="filters">
+          <input type="search" id="recherche-act" placeholder="Rechercher une activité…" aria-label="Rechercher une activité">
+          <select id="filtre-statut-act" aria-label="Filtrer par statut">
+            <option value="">Tous les statuts</option>
+          </select>
+          <button class="btn btn-green" id="btn-nouvelle" hidden>+ Nouvelle activité</button>
+        </div>
+        <div class="table-wrap">
+          <table class="suivi" id="table-activites">
+            <thead><tr>
+              <th>Stratégie</th><th>Activité</th><th>Département(s)</th><th>Échéance</th><th>Statut</th><th>Commentaires</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <!-- OUTPUTS -->
+    <section id="tab-outputs" class="tab-panel" hidden>
+      <div class="kpis" id="kpis-outputs"></div>
+      <article class="card card-flush">
+        <div class="card-head">
+          <h2>Outputs <span data-annee>2026</span> : cible et réalisé</h2>
+          <p>Niveau d'atteinte des outputs et zones d'intervention concernées</p>
+        </div>
+        <div class="filters">
+          <input type="search" id="recherche-out" placeholder="Rechercher un output…" aria-label="Rechercher un output">
+          <select id="filtre-statut-out" aria-label="Filtrer par statut">
+            <option value="">Tous les statuts</option>
+          </select>
+          <select id="filtre-zone-out" aria-label="Filtrer par zone">
+            <option value="">Toutes les zones</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table class="suivi" id="table-outputs">
+            <thead><tr>
+              <th>Output (cible)</th><th>Valeur réalisée</th><th>Statut</th><th>Zones</th><th>Commentaire</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <!-- CARTE & INDICATEURS -->
+    <section id="tab-carte" class="tab-panel" hidden>
+      <div class="grid-2 grid-carte">
+        <article class="card">
+          <h3 class="card-title">Zones d'intervention</h3>
+          <div class="filters filters-tight">
+            <select id="carte-bw" aria-label="Big Win"><option value="">Tous les Big Wins</option></select>
+            <select id="carte-indic" aria-label="Indicateur"><option value="">État des outputs</option></select>
+            <select id="carte-periode" aria-label="Période" hidden></select>
+          </div>
+          <div id="grande-carte" class="grande-carte"></div>
+          <div id="legende-carte" class="legende"></div>
+        </article>
+        <article class="card">
+          <h3 class="card-title">Par zone</h3>
+          <div id="table-zones"></div>
+        </article>
+      </div>
+      <article class="card">
+        <h3 class="card-title">Indicateurs</h3>
+        <div id="indicateurs"></div>
+      </article>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <button data-goto="stats" class="active">
+      <svg viewBox="0 0 24 24"><path d="M4 18a8 8 0 1 1 16 0M12 18l4-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      Tableau de bord</button>
+    <button data-goto="nouvelle">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      Nouvelle activité</button>
+    <button data-goto="activites">
+      <svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+      Activités</button>
+    <button data-goto="outputs">
+      <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8z" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+      Outputs</button>
+    <button data-goto="carte">
+      <svg viewBox="0 0 24 24"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+      Carte</button>
+  </nav>
+
+  <!-- Nouvelle activité -->
+  <dialog id="dlg-nouvelle" class="dlg">
+    <form method="dialog" id="form-nouvelle">
+      <h3>Nouvelle activité</h3>
+      <label>Big Win <select id="na-bw" required></select></label>
+      <label>Stratégie <select id="na-strat" required></select></label>
+      <label>Activité <textarea id="na-libelle" rows="3" required></textarea></label>
+      <div class="row-2">
+        <label>Statut <select id="na-statut"></select></label>
+        <label>Échéance <input id="na-echeance" placeholder="ex. Q4 2026"></label>
+      </div>
+      <label>Commentaire <textarea id="na-comm" rows="2"></textarea></label>
+      <p class="form-err" id="na-err"></p>
+      <div class="dlg-actions">
+        <button type="button" class="btn btn-outline" data-close>Annuler</button>
+        <button type="submit" class="btn btn-green">Enregistrer</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modification d'un output -->
+  <dialog id="dlg-output" class="dlg">
+    <form method="dialog" id="form-output">
+      <h3>Mettre à jour l'output</h3>
+      <p class="dlg-sub" id="out-cible"></p>
+      <label>Statut <select id="out-statut"></select></label>
+      <label>Valeur réalisée <textarea id="out-valeur" rows="2"></textarea></label>
+      <label>Commentaire <textarea id="out-comm" rows="2"></textarea></label>
+      <fieldset><legend>Zones d'intervention</legend><div id="out-zones" class="zones-check"></div></fieldset>
+      <p class="form-err" id="out-err"></p>
+      <div class="dlg-actions">
+        <button type="button" class="btn btn-outline" data-close>Annuler</button>
+        <button type="submit" class="btn btn-green">Enregistrer</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Saisie valeur indicateur -->
+  <dialog id="dlg-indic" class="dlg">
+    <form method="dialog" id="form-indic">
+      <h3>Valeur d'indicateur</h3>
+      <p class="dlg-sub" id="ind-titre"></p>
+      <div class="row-2">
+        <label>Zone <select id="ind-zone"></select></label>
+        <label>Période <input id="ind-periode" placeholder="ex. 2026-T4" required></label>
+      </div>
+      <div class="row-2">
+        <label>Valeur <input id="ind-valeur" type="number" step="any" required></label>
+        <label>Cible <input id="ind-cible" type="number" step="any"></label>
+      </div>
+      <p class="form-err" id="ind-err"></p>
+      <div class="dlg-actions">
+        <button type="button" class="btn btn-outline" data-close>Annuler</button>
+        <button type="submit" class="btn btn-green">Enregistrer</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="assets/config.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>

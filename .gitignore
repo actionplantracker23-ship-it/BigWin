@@ -1,0 +1,7 @@
+codes_acces.tsv
+*.xlsx
+__pycache__/
+.DS_Store
+# Données et connexion : jamais dans le dépôt public
+assets/config.js
+supabase/seed.sql

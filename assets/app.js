@@ -440,7 +440,7 @@
       return `<path d="M${x1},${y1}A${R},${R} 0 ${g} 1 ${x2},${y2}L${x3},${y3}A${r},${r} 0 ${g} 0 ${x4},${y4}Z" fill="${p.c}"><title>${p.l} : ${p.n}</title></path>`;
     };
     h += `<section class="m-diapo" id="m-chiffres">${entete("Chiffres clés", "Toutes les Big Wins" + filtre)}
-      <div class="m-kpis">${[[parBw.length, "Big Wins et enablers"], [acts.length, "Activités planifiées"], [ca.completee, "Activités finalisées"], [co.atteint, "Outputs atteints"]]
+      <div class="m-kpis">${[[new Set(parBw.map((x) => x.b.code.replace(/^(BW \d+)\..*$/, "$1"))).size, "Big Wins et enablers"], [acts.length, "Activités planifiées"], [ca.completee, "Activités finalisées"], [co.atteint, "Outputs atteints"]]
         .map(([v, l]) => `<div class="m-kpi"><b>${v}</b><span>${l}</span></div>`).join("")}</div>
       <div class="m-graphes">
         <div class="m-graphe"><h4>Taux de réalisation des activités (%) par Big Win</h4>
